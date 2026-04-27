@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import ResidentsClient from './ResidentsClient'
 
 export default async function ResidentsPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: residents } = await supabase

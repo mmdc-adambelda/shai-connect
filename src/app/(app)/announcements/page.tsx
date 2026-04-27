@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import AnnouncementsClient from './AnnouncementsClient'
 
 export default async function AnnouncementsPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: announcements } = await supabase

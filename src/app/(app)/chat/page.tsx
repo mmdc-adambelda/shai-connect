@@ -4,7 +4,7 @@ import ChatClient from './ChatClient'
 const ROOMS = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
 
 export default async function ChatPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: profile } = await supabase

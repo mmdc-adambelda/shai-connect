@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import FeedClient from './FeedClient'
 
 export default async function FeedPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: posts } = await supabase

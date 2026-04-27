@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import MessagesClient from './MessagesClient'
 
 export default async function MessagesPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: profile } = await supabase

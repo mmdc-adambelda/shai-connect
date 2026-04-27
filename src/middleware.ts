@@ -4,17 +4,14 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // Always allow: auth pages, API routes, static files
   const isPublic =
     pathname.startsWith('/auth') ||
     pathname.startsWith('/api/')
 
-  // If env vars are missing, let everything through so the app can show errors
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project-id')) {
-    // Env vars not set — only redirect protected pages to auth
     if (!isPublic) {
       const url = request.nextUrl.clone()
       url.pathname = '/auth'
@@ -56,10 +53,7 @@ export async function middleware(request: NextRequest) {
       url.pathname = '/feed'
       return NextResponse.redirect(url)
     }
-  } catch (err) {
-    // If Supabase call fails (network error, bad keys), don't crash —
-    // just allow the request through so the page can show a proper error
-    console.error('Middleware Supabase error:', err)
+  } catch {
     if (!isPublic) {
       const url = request.nextUrl.clone()
       url.pathname = '/auth'

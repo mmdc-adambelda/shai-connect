@@ -31,7 +31,7 @@ export default function ResidentsClient({
   const [phaseFilter, setPhaseFilter] = useState('All')
   const supabase = createClient()
 
-  const phases = ['All', 'Phase 1 – Sampaguita', 'Phase 2 – Rosal', 'Phase 3 – Ilang-Ilang', 'Phase 4 – Dama de Noche']
+  const phases = ['All', 'Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
 
   const filtered = residents.filter(r => {
     if (r.id === currentUserId) return false
