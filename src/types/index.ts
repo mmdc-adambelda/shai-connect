@@ -20,7 +20,6 @@ export interface Post {
   created_at: string
   updated_at?: string
   profiles?: Profile
-  // Aggregates joined from DB
   reaction_counts?: ReactionCount[]
   comment_count?: number
   user_reaction?: ReactionType | null
@@ -60,11 +59,10 @@ export interface Follow {
   created_at: string
 }
 
-// ── Types for existing pages (chat, messages, announcements) ──
-
 export interface ChatMessage {
   id: string
   room_id: string
+  room: string
   sender_id: string
   user_id: string
   content: string
@@ -75,8 +73,8 @@ export interface ChatMessage {
 export interface DirectMessage {
   id: string
   sender_id: string
-  receiver_id: string
   recipient_id: string
+  receiver_id: string
   content: string
   read: boolean
   created_at: string
@@ -88,12 +86,13 @@ export interface DirectMessage {
 export interface Announcement {
   id: string
   title: string
-  body?: string
+  body: string
   content: string
   author_id: string
+  created_by?: string
   phase_tag?: string | null
-  pinned?: boolean
-  category: string   
+  pinned: boolean
+  category: string
   created_at: string
   profiles?: Profile
 }
