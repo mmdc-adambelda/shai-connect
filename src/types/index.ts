@@ -88,6 +88,7 @@ export interface Announcement {
   author_id: string
   phase_tag?: string | null
   pinned?: boolean
+  category?: string | null   
   created_at: string
   profiles?: Profile
 }
