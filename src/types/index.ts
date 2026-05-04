@@ -84,6 +84,7 @@ export interface DirectMessage {
 export interface Announcement {
   id: string
   title: string
+  body?: string
   content: string
   author_id: string
   phase_tag?: string | null
