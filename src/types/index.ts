@@ -80,6 +80,8 @@ export interface DirectMessage {
   read: boolean
   created_at: string
   profiles?: Profile
+  sender?: Profile
+  recipient?: Profile
 }
 
 export interface Announcement {
