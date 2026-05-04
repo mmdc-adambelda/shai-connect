@@ -65,6 +65,7 @@ export interface Follow {
 export interface ChatMessage {
   id: string
   room_id: string
+  sender_id: string
   user_id: string
   content: string
   created_at: string
