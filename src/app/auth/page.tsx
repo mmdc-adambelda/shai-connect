@@ -83,7 +83,17 @@ export default function AuthPage() {
       } else {
         const fullName = `${firstName.trim()} ${lastName.trim()}`
 
-        const { data, error } = await supabase.auth.signUp({ email, password })
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              unit: unit.trim(),
+              phase,
+            }
+          }
+        })
         if (error) { setError(error.message) }
         else if (data.user) {
           const { error: profileError } = await supabase.from('profiles').insert({
