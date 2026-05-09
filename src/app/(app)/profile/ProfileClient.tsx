@@ -248,7 +248,7 @@ export default function ProfileClient({
             <div className="relative">
               <div
                 className="ring-4 rounded-full"
-                style={{ background: 'var(--surface)', ringColor: 'var(--surface)' }}
+                style={{ background: 'var(--surface)' }}
               >
                 <Avatar
                   name={profile?.full_name || 'Me'}
