@@ -96,20 +96,7 @@ export default function AuthPage() {
         })
         if (error) { setError(error.message) }
         else if (data.user) {
-          const { error: profileError } = await supabase.from('profiles').insert({
-            id:        data.user.id,
-            full_name: fullName,
-            unit:      unit.trim(),
-            phase,
-            role:      'resident',
-          })
-          if (profileError && profileError.code !== '23505') {
-            setError(
-              profileError.message.includes('profiles')
-                ? 'Profile could not be saved. Make sure you ran schema.sql in your Supabase SQL Editor.'
-                : profileError.message
-            )
-          } else if (data.session) {
+          if (data.session) {
             router.push('/feed'); router.refresh()
           } else {
             setSuccess('Account created! Check your email and click the confirmation link, then sign in.')
