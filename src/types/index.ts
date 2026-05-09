@@ -93,6 +93,7 @@ export interface Announcement {
   phase_tag?: string | null
   pinned: boolean
   category: string
+  image_url?: string | null   // ← photo attachment
   created_at: string
   profiles?: Profile
 }
