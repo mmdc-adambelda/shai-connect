@@ -1,11 +1,14 @@
-export type Role = 'admin' | 'moderator' | 'resident'
+export type Role = 'resident' | 'moderator' | 'admin' | 'superadmin'
 
 export interface Profile {
   id: string
   full_name: string
-  unit: string
+  unit: string          // kept for legacy display (e.g. "Block 3, Lot 12")
+  block_no: number | null
+  lot_no: number | null
   phase: string
   role: Role
+  project_code: string | null
   avatar_url?: string | null
   bio?: string | null
   created_at: string
@@ -93,7 +96,7 @@ export interface Announcement {
   phase_tag?: string | null
   pinned: boolean
   category: string
-  image_url?: string | null   // ← photo attachment
+  image_url?: string | null
   created_at: string
   profiles?: Profile
 }
