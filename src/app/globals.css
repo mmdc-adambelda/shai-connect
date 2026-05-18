@@ -40,7 +40,7 @@
     --shadow-lg: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
   }
   *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
-  html { scroll-behavior: smooth; font-feature-settings: 'cv02','cv03','cv04'; }
+  html { scroll-behavior: smooth; overflow-x: hidden; font-feature-settings: 'cv02','cv03','cv04'; }
   body {
     font-family: 'DM Sans', system-ui, sans-serif;
     background: var(--surface-2);
