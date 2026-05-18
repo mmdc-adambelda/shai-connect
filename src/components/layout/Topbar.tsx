@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, Sun, Moon, LogOut, X, Megaphone, MessageSquare, ThumbsUp, Search } from 'lucide-react'
+import { Bell, Sun, Moon, LogOut, X, Megaphone, MessageSquare, ThumbsUp, Search, Menu } from 'lucide-react'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -8,9 +8,9 @@ import { useState } from 'react'
 import type { Profile } from '@/types'
 
 const MOCK_NOTIFICATIONS = [
-  { id: '1', icon: Megaphone, label: 'New Announcement', desc: 'Water interruption scheduled tomorrow 6AM–12NN.', time: '2h ago', read: false, color: 'text-yellow-600' },
-  { id: '2', icon: ThumbsUp,  label: 'Juan liked your post', desc: '"Anyone attending the general assembly?"', time: '4h ago', read: false, color: 'text-brand' },
-  { id: '3', icon: MessageSquare, label: 'New message from HOA Admin', desc: 'Your gate pass request has been approved.', time: '1d ago', read: true, color: 'text-blue-600' },
+  { id: '1', icon: Megaphone,      label: 'New Announcement',       desc: 'Water interruption scheduled tomorrow 6AM–12NN.', time: '2h ago', read: false, color: 'text-yellow-600' },
+  { id: '2', icon: ThumbsUp,       label: 'Juan liked your post',   desc: '"Anyone attending the general assembly?"',        time: '4h ago', read: false, color: 'text-brand'    },
+  { id: '3', icon: MessageSquare,  label: 'New message from HOA Admin', desc: 'Your gate pass request has been approved.',   time: '1d ago', read: true,  color: 'text-blue-600' },
 ]
 
 function Avatar({ name, size = 32 }: { name: string; size?: number }) {
@@ -22,11 +22,17 @@ function Avatar({ name, size = 32 }: { name: string; size?: number }) {
   )
 }
 
-export default function Topbar({ profile }: { profile: Profile | null }) {
+interface TopbarProps {
+  profile: Profile | null
+  onMenuClick: () => void
+}
+
+export default function Topbar({ profile, onMenuClick }: TopbarProps) {
   const { theme, toggle } = useTheme()
   const router = useRouter()
   const supabase = createClient()
   const [showNotifs, setShowNotifs] = useState(false)
+  const [showMobileSearch, setShowMobileSearch] = useState(false)
   const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS)
   const unreadCount = notifications.filter(n => !n.read).length
 
@@ -38,10 +44,19 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
 
   return (
     <header
-      className="h-14 flex items-center px-5 gap-2 sticky top-0 z-40"
+      className="h-14 flex items-center px-4 gap-2 sticky top-0 z-40"
       style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-xs)' }}
     >
-      {/* Search bar */}
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={onMenuClick}
+        className="md:hidden btn-icon flex-shrink-0"
+        aria-label="Open menu"
+      >
+        <Menu className="w-4 h-4" />
+      </button>
+
+      {/* Desktop search */}
       <div className="flex-1 max-w-xs hidden md:block">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
@@ -54,6 +69,15 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
       </div>
 
       <div className="flex-1" />
+
+      {/* Mobile search toggle */}
+      <button
+        onClick={() => setShowMobileSearch(s => !s)}
+        className="md:hidden btn-icon"
+        aria-label="Search"
+      >
+        <Search className="w-4 h-4" />
+      </button>
 
       {/* Theme toggle */}
       <button onClick={toggle} className="btn-icon" title="Toggle theme">
@@ -73,8 +97,14 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
         {showNotifs && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
-            <div className="absolute right-0 top-11 w-80 z-50 overflow-hidden card"
-              style={{ boxShadow: 'var(--shadow-lg)', borderRadius: 'var(--radius-lg)' }}>
+            <div
+              className="absolute right-0 top-11 z-50 overflow-hidden card"
+              style={{
+                width: 'min(320px, calc(100vw - 24px))',
+                boxShadow: 'var(--shadow-lg)',
+                borderRadius: 'var(--radius-lg)',
+              }}
+            >
               <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border-soft)' }}>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-sm">Notifications</span>
@@ -86,8 +116,11 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
                 </div>
                 <div className="flex items-center gap-2">
                   {unreadCount > 0 && (
-                    <button onClick={() => setNotifications(p => p.map(n => ({ ...n, read: true })))}
-                      className="text-xs font-medium text-brand" style={{ color: 'var(--brand)' }}>
+                    <button
+                      onClick={() => setNotifications(p => p.map(n => ({ ...n, read: true })))}
+                      className="text-xs font-medium"
+                      style={{ color: 'var(--brand)' }}
+                    >
                       Mark all read
                     </button>
                   )}
@@ -98,11 +131,13 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
               </div>
               <div className="max-h-80 overflow-y-auto">
                 {notifications.map(n => (
-                  <div key={n.id}
+                  <div
+                    key={n.id}
                     className="flex gap-3 px-4 py-3 cursor-pointer transition-colors"
-                    style={{ background: !n.read ? 'var(--brand-xlight)' : undefined, borderBottom: '1px solid var(--border-soft)' }}
-                    onMouseEnter={e => { if (n.read) (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-2)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = !n.read ? 'var(--brand-xlight)' : '' }}
+                    style={{
+                      background: !n.read ? 'var(--brand-xlight)' : undefined,
+                      borderBottom: '1px solid var(--border-soft)',
+                    }}
                     onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))}
                   >
                     <div className={`mt-0.5 flex-shrink-0 ${n.color}`}><n.icon className="w-4 h-4" /></div>
@@ -121,8 +156,8 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
       </div>
 
       {/* User chip */}
-      <div className="flex items-center gap-2.5 pl-3 ml-1" style={{ borderLeft: '1px solid var(--border-soft)' }}>
-        <Avatar name={profile?.full_name || 'Me'} size={32} />
+      <div className="flex items-center gap-2 pl-2 ml-1" style={{ borderLeft: '1px solid var(--border-soft)' }}>
+        <Avatar name={profile?.full_name || 'Me'} size={30} />
         <div className="hidden sm:block">
           <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>
             {profile?.full_name || 'Resident'}
@@ -133,6 +168,25 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
           <LogOut className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {/* Mobile search — full-width dropdown */}
+      {showMobileSearch && (
+        <div
+          className="absolute left-0 right-0 top-14 px-3 py-2 z-30 md:hidden"
+          style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)' }}
+        >
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
+            <input
+              autoFocus
+              className="input py-2 pl-9 text-sm h-9"
+              placeholder="Search residents, posts…"
+              style={{ borderRadius: '99px' }}
+              onBlur={() => setShowMobileSearch(false)}
+            />
+          </div>
+        </div>
+      )}
     </header>
   )
 }
