@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Home, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Leaf, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 const PHASES = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
 
@@ -25,17 +25,14 @@ export default function AuthPage() {
   const [success, setSuccess]   = useState('')
   const [showPw, setShowPw]     = useState(false)
 
-  // Login fields
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
 
-  // Sign-up fields
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName]   = useState('')
   const [unit, setUnit]           = useState('')
   const [phase, setPhase]         = useState('Phase 1')
 
-  // Per-field validation errors (signup only)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const validateSignup = () => {
@@ -67,32 +64,18 @@ export default function AuthPage() {
       if (Object.keys(errors).length > 0) { setFieldErrors(errors); return }
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    if (!supabaseUrl || supabaseUrl.includes('your-project-id') || supabaseUrl === '') {
-      setError('Supabase is not configured. Please add your credentials to .env.local.')
-      return
-    }
-
     setLoading(true)
 
     try {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) { setError(error.message) } else { router.push('/feed'); router.refresh() }
-
       } else {
         const fullName = `${firstName.trim()} ${lastName.trim()}`
-
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            data: {
-              full_name: fullName,
-              unit: unit.trim(),
-              phase,
-            }
-          }
+          options: { data: { full_name: fullName, unit: unit.trim(), phase } }
         })
         if (error) { setError(error.message) }
         else if (data.user) {
@@ -120,60 +103,74 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: 'var(--surface-2)' }}
+    >
+      <div className="w-full max-w-sm">
+
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-600 mb-4">
-            <Home className="w-7 h-7 text-white" />
+        <div className="text-center mb-6">
+          <div
+            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
+            style={{ background: 'var(--brand)' }}
+          >
+            <Leaf className="w-7 h-7 text-white" />
           </div>
-          <h1 className="font-serif text-3xl font-bold text-brand-700 dark:text-brand-400">SHAI Connect</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Sabella Homeowners Association Inc.</p>
+          <h1 className="font-display text-3xl font-bold" style={{ color: 'var(--brand)' }}>
+            SHAI Connect
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+            Sabella Homeowners Association Inc.
+          </p>
         </div>
 
-        <div className="card p-8">
+        <div className="card p-6">
           {/* Mode tabs */}
-          <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1 mb-6">
+          <div
+            className="flex rounded-lg p-1 mb-5"
+            style={{ background: 'var(--surface-2)' }}
+          >
             {(['login', 'signup'] as const).map(m => (
               <button
                 key={m}
                 onClick={() => switchMode(m)}
-                className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  mode === m
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}
+                className="flex-1 py-1.5 rounded-md text-sm font-medium transition-all"
+                style={{
+                  background: mode === m ? 'var(--surface)' : 'transparent',
+                  color: mode === m ? 'var(--text-primary)' : 'var(--text-muted)',
+                  boxShadow: mode === m ? 'var(--shadow-xs)' : 'none',
+                }}
               >
                 {m === 'login' ? 'Sign In' : 'Register'}
               </button>
             ))}
           </div>
 
-          {/* Global error / success */}
+          {/* Error / success banners */}
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm whitespace-pre-line">
+            <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}>
               {error}
             </div>
           )}
           {success && (
-            <div className="mb-4 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-sm">
+            <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: 'var(--brand-xlight)', color: 'var(--brand)', border: '1px solid var(--brand-light)' }}>
               {success}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          <form onSubmit={handleSubmit} className="space-y-3" noValidate>
 
-            {/* ── Sign-up only fields ── */}
+            {/* Sign-up fields */}
             {mode === 'signup' && (
               <>
-                {/* First + Last name side by side */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                       First Name *
                     </label>
                     <input
-                      className={`input ${fieldErrors.firstName ? 'border-red-400 focus:border-red-400' : ''}`}
+                      className={`input ${fieldErrors.firstName ? 'border-red-400' : ''}`}
                       type="text"
                       value={firstName}
                       onChange={e => setFirstName(e.target.value)}
@@ -183,11 +180,11 @@ export default function AuthPage() {
                     {fieldErrors.firstName && <FieldError msg={fieldErrors.firstName} />}
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                       Last Name *
                     </label>
                     <input
-                      className={`input ${fieldErrors.lastName ? 'border-red-400 focus:border-red-400' : ''}`}
+                      className={`input ${fieldErrors.lastName ? 'border-red-400' : ''}`}
                       type="text"
                       value={lastName}
                       onChange={e => setLastName(e.target.value)}
@@ -199,11 +196,11 @@ export default function AuthPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
-                    Block & Lot *
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Block &amp; Lot *
                   </label>
                   <input
-                    className={`input ${fieldErrors.unit ? 'border-red-400 focus:border-red-400' : ''}`}
+                    className={`input ${fieldErrors.unit ? 'border-red-400' : ''}`}
                     type="text"
                     value={unit}
                     onChange={e => setUnit(e.target.value)}
@@ -213,7 +210,7 @@ export default function AuthPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                     Phase
                   </label>
                   <select className="input" value={phase} onChange={e => setPhase(e.target.value)}>
@@ -223,13 +220,13 @@ export default function AuthPage() {
               </>
             )}
 
-            {/* ── Shared fields ── */}
+            {/* Shared fields */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                 Email Address *
               </label>
               <input
-                className={`input ${fieldErrors.email ? 'border-red-400 focus:border-red-400' : ''}`}
+                className={`input ${fieldErrors.email ? 'border-red-400' : ''}`}
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -240,12 +237,12 @@ export default function AuthPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                 Password *
               </label>
               <div className="relative">
                 <input
-                  className={`input pr-9 ${fieldErrors.password ? 'border-red-400 focus:border-red-400' : ''}`}
+                  className={`input pr-10 ${fieldErrors.password ? 'border-red-400' : ''}`}
                   type={showPw ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -256,21 +253,22 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {fieldErrors.password && <FieldError msg={fieldErrors.password} />}
               {mode === 'signup' && !fieldErrors.password && (
-                <p className="text-xs text-gray-400 mt-1">Minimum 6 characters</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Minimum 6 characters</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary flex items-center justify-center gap-2 py-2.5 mt-2"
+              className="w-full btn-primary flex items-center justify-center gap-2 py-2.5 mt-1"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {mode === 'login' ? 'Sign In' : 'Create Account'}
@@ -278,20 +276,12 @@ export default function AuthPage() {
           </form>
 
           {mode === 'login' && (
-            <p className="text-center text-xs text-gray-400 mt-4">
+            <p className="text-center text-xs mt-4" style={{ color: 'var(--text-muted)' }}>
               Only verified Sabella HOA residents may register.
             </p>
           )}
         </div>
 
-        <div className="mt-4 p-4 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
-          <p className="text-xs font-bold text-yellow-800 dark:text-yellow-400 mb-1">⚙️ First-time setup?</p>
-          <p className="text-xs text-yellow-700 dark:text-yellow-500">
-            Make sure you have a <code className="bg-yellow-100 dark:bg-yellow-900/40 px-1 rounded">.env.local</code> file
-            with your Supabase credentials, and that you ran{' '}
-            <code className="bg-yellow-100 dark:bg-yellow-900/40 px-1 rounded">supabase/schema.sql</code> in the Supabase SQL Editor.
-          </p>
-        </div>
       </div>
     </div>
   )
