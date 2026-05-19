@@ -369,3 +369,275 @@ function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }
           </p>
         </div>
         <div className="relative">
+          <button className="btn-icon w-8 h-8" onClick={() => setMenuOpen(v => !v)}>
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+              <div
+                className="absolute right-0 top-9 z-20 card py-1 w-36"
+                style={{ boxShadow: 'var(--shadow-lg)' }}
+              >
+                <button
+                  className="w-full text-left px-3 py-2 text-sm transition-colors"
+                  style={{ color: 'var(--text-secondary)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = '')}
+                >
+                  Copy link
+                </button>
+                {post.author_id === currentUserId && (
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm text-red-500 transition-colors"
+                    onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '')}
+                  >
+                    Delete post
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <p className="text-sm leading-relaxed whitespace-pre-wrap mb-3" style={{ color: 'var(--text-primary)' }}>
+        {post.content}
+      </p>
+
+      {post.image_url && post.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
+        <div className="mb-3 overflow-hidden rounded-xl border" style={{ borderColor: 'var(--border-soft)' }}>
+          <img src={post.image_url} alt="Post attachment" className="w-full object-cover max-h-80" />
+        </div>
+      )}
+
+      {post.image_url && !post.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
+        
+          href={post.image_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-3 flex items-center gap-2 p-3 rounded-xl text-sm font-medium transition-colors"
+          style={{ background: 'var(--brand-xlight)', color: 'var(--brand)' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--brand-light)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'var(--brand-xlight)')}
+        >
+          <Paperclip className="w-4 h-4" /> View attachment
+        </a>
+      )}
+
+      <ReactionBar
+        postId={post.id}
+        initialCounts={reactionCounts}
+        initialUserReaction={post.user_reaction ?? null}
+      />
+    </div>
+  )
+}
+
+function ComposeModal({ currentProfile, currentUserId, onPost, onClose }: {
+  currentProfile: Profile | null
+  currentUserId: string
+  onPost: (post: Post) => void
+  onClose: () => void
+}) {
+  const [content, setContent]           = useState('')
+  const [phaseTag, setPhaseTag]         = useState('All Phases')
+  const [posting, setPosting]           = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [fileError, setFileError]       = useState('')
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef  = useRef<HTMLInputElement>(null)
+  const supabase = createClient()
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { setFileError('File too large. Max 2MB.'); return }
+    setFileError('')
+    setSelectedFile(file)
+  }
+
+  const handlePost = async () => {
+    if (!content.trim() || posting) return
+    setPosting(true)
+    let image_url = null
+    if (selectedFile) {
+      const ext  = selectedFile.name.split('.').pop()
+      const path = `posts/${currentUserId}/${Date.now()}.${ext}`
+      const { data: up, error: upErr } = await supabase.storage
+        .from('shai-uploads')
+        .upload(path, selectedFile, { upsert: true })
+      if (!upErr && up) {
+        const { data: urlData } = supabase.storage.from('shai-uploads').getPublicUrl(path)
+        image_url = urlData.publicUrl
+      }
+    }
+    const { data, error } = await supabase
+      .from('posts')
+      .insert({ content: content.trim(), phase_tag: phaseTag, author_id: currentUserId, image_url })
+      .select('*, profiles(id, full_name, unit, phase, role, avatar_url)')
+      .single()
+    if (!error && data) { onPost(data); onClose() }
+    setPosting(false)
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-panel" onClick={e => e.stopPropagation()}>
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '1px solid var(--border-soft)' }}
+        >
+          <h2 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>Create Post</h2>
+          <button onClick={onClose} className="btn-icon w-7 h-7"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex gap-3 mb-4">
+            <AvatarUI
+              name={currentProfile?.full_name || 'Me'}
+              avatarUrl={currentProfile?.avatar_url}
+              size={42}
+            />
+            <div>
+              <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                {currentProfile?.full_name}
+              </p>
+              <select
+                className="input py-1 text-xs mt-1 w-auto"
+                value={phaseTag}
+                onChange={e => setPhaseTag(e.target.value)}
+              >
+                {PHASES.map(p => <option key={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <textarea
+            className="w-full resize-none text-sm leading-relaxed outline-none bg-transparent"
+            style={{ color: 'var(--text-primary)', minHeight: 120 }}
+            placeholder={`What's on your mind, ${currentProfile?.full_name?.split(' ')[0] || 'neighbor'}?`}
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            autoFocus
+          />
+
+          {selectedFile && (
+            <div
+              className="mt-2 flex items-center gap-2 text-xs p-2 rounded-lg"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-muted)' }}
+            >
+              <Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">{selectedFile.name}</span>
+              <button onClick={() => setSelectedFile(null)} className="ml-auto btn-icon w-5 h-5 flex-shrink-0">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+          {fileError && <p className="text-xs text-red-500 mt-1">{fileError}</p>}
+
+          <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+          <input ref={fileInputRef}  type="file" accept=".pdf,.doc,.docx,.txt" className="hidden" onChange={handleFileSelect} />
+        </div>
+
+        <div
+          className="px-5 py-4 flex items-center justify-between"
+          style={{ borderTop: '1px solid var(--border-soft)' }}
+        >
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => { if (photoInputRef.current) { photoInputRef.current.value = ''; photoInputRef.current.click() } }}
+              className="btn-ghost py-2 px-3 text-xs gap-1.5"
+            >
+              <ImagePlus className="w-4 h-4" /> Photo
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (fileInputRef.current) { fileInputRef.current.value = ''; fileInputRef.current.click() } }}
+              className="btn-ghost py-2 px-3 text-xs gap-1.5"
+            >
+              <FileText className="w-4 h-4" /> File
+            </button>
+          </div>
+          <button onClick={handlePost} disabled={posting || !content.trim()} className="btn-primary gap-2">
+            {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+            Post
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function FeedClient({ posts: initial, currentProfile, currentUserId }: {
+  posts: Post[]
+  currentProfile: Profile | null
+  currentUserId: string
+}) {
+  const [posts, setPosts]             = useState(initial)
+  const [showCompose, setShowCompose] = useState(false)
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="font-display text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+            Community Feed
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            Share updates with your neighbors
+          </p>
+        </div>
+        <button onClick={() => setShowCompose(true)} className="btn-primary">
+          <span className="text-base leading-none">+</span> New Post
+        </button>
+      </div>
+
+      <div
+        className="card p-3.5 mb-5 flex gap-3 items-center cursor-pointer transition-all hover:shadow-md"
+        onClick={() => setShowCompose(true)}
+        style={{ borderRadius: 'var(--radius-lg)' }}
+      >
+        <AvatarUI
+          name={currentProfile?.full_name || 'Me'}
+          avatarUrl={currentProfile?.avatar_url}
+          size={38}
+        />
+        <div
+          className="flex-1 px-4 py-2.5 text-sm rounded-full transition-colors"
+          style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', cursor: 'text' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+        >
+          What&apos;s on your mind, {currentProfile?.full_name?.split(' ')[0] || 'neighbor'}?
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {posts.length === 0 && (
+          <div className="card p-14 text-center">
+            <p className="text-4xl mb-4">🌿</p>
+            <p className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No posts yet</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              Be the first to share something with the community!
+            </p>
+          </div>
+        )}
+        {posts.map(post => (
+          <PostCard key={post.id} post={post} currentUserId={currentUserId} />
+        ))}
+      </div>
+
+      {showCompose && (
+        <ComposeModal
+          currentProfile={currentProfile}
+          currentUserId={currentUserId}
+          onPost={p => setPosts([p, ...posts])}
+          onClose={() => setShowCompose(false)}
+        />
+      )}
+    </div>
+  )
+}
