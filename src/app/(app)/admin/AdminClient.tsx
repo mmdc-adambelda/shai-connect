@@ -2,18 +2,20 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Users, FileText, Megaphone, MessageSquare, ShieldAlert, ChevronDown, CheckCircle } from 'lucide-react'
+import {
+  Users, FileText, Megaphone, MessageSquare, ShieldAlert,
+  CheckCircle, XCircle, Edit2, Save, X, Search,
+  ShieldCheck, ShieldOff, KeyRound, Hash,
+} from 'lucide-react'
 import type { Profile } from '@/types'
 import clsx from 'clsx'
 
-function initials(name: string) {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-}
+const PHASES = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
 
 const MOCK_FLAGS = [
-  { id: '1', user: 'unknown_user_42', content: 'Spam post in Phase 2 chat', reason: 'Spam', time: '2h ago' },
-  { id: '2', user: 'resident_anon', content: 'Offensive comment on announcement', reason: 'Conduct', time: '5h ago' },
-  { id: '3', user: 'new_account_7', content: 'Unverified claim about HOA funds', reason: 'Misinformation', time: '1d ago' },
+  { id: '1', user: 'unknown_user_42',  content: 'Spam post in Phase 2 chat',             reason: 'Spam',          time: '2h ago' },
+  { id: '2', user: 'resident_anon',    content: 'Offensive comment on announcement',      reason: 'Conduct',       time: '5h ago' },
+  { id: '3', user: 'new_account_7',   content: 'Unverified claim about HOA funds',       reason: 'Misinformation', time: '1d ago' },
 ]
 
 const reasonBadge: Record<string, string> = {
@@ -22,8 +24,168 @@ const reasonBadge: Record<string, string> = {
   Misinformation: 'badge-red',
 }
 
+function initials(name: string) {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
+
+function roleBadgeClass(role: string) {
+  if (role === 'superadmin') return 'badge-red'
+  if (role === 'admin')      return 'badge-red'
+  if (role === 'moderator')  return 'badge-blue'
+  return 'badge-green'
+}
+
+// ── Inline Edit Modal ─────────────────────────────────────────────
+function EditUserModal({
+  user,
+  onClose,
+  onSaved,
+}: {
+  user: Profile
+  onClose: () => void
+  onSaved: (updated: Profile) => void
+}) {
+  const supabase = createClient()
+  const [fullName, setFullName]     = useState(user.full_name)
+  const [projectCode, setProjectCode] = useState(user.project_code ?? '')
+  const [blockNo, setBlockNo]       = useState(String(user.block_no ?? ''))
+  const [lotNo, setLotNo]           = useState(String(user.lot_no ?? ''))
+  const [phase, setPhase]           = useState(user.phase)
+  const [saving, setSaving]         = useState(false)
+  const [error, setError]           = useState('')
+
+  const handleSave = async () => {
+    setError('')
+    if (!fullName.trim())                       { setError('Full name is required.'); return }
+    if (!/^SHPY\d{6}$/.test(projectCode))       { setError('SHPY code must be SHPY followed by 6 digits.'); return }
+    if (!blockNo || parseInt(blockNo) <= 0)     { setError('Block must be a positive number.'); return }
+    if (!lotNo   || parseInt(lotNo)   <= 0)     { setError('Lot must be a positive number.'); return }
+
+    setSaving(true)
+    const unit = `Block ${blockNo}, Lot ${lotNo}`
+    const { error: dbErr } = await supabase
+      .from('profiles')
+      .update({
+        full_name:    fullName.trim(),
+        project_code: projectCode.trim().toUpperCase(),
+        block_no:     parseInt(blockNo),
+        lot_no:       parseInt(lotNo),
+        unit,
+        phase,
+      })
+      .eq('id', user.id)
+
+    setSaving(false)
+    if (dbErr) { setError(dbErr.message); return }
+
+    onSaved({
+      ...user,
+      full_name:    fullName.trim(),
+      project_code: projectCode.trim().toUpperCase(),
+      block_no:     parseInt(blockNo),
+      lot_no:       parseInt(lotNo),
+      unit,
+      phase,
+    })
+    onClose()
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="card w-full max-w-md p-6"
+        style={{ boxShadow: 'var(--shadow-xl)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Edit Resident</h3>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Changes saved immediately to the database</p>
+          </div>
+          <button onClick={onClose} className="btn-icon w-7 h-7"><X className="w-4 h-4" /></button>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}>
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {/* Full name */}
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>Full Name *</label>
+            <input className="input" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Juan dela Cruz" />
+          </div>
+
+          {/* SHPY code */}
+          <div>
+            <label className="block text-xs font-semibold mb-1.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+              <KeyRound className="w-3 h-3" /> SHPY Project Code *
+            </label>
+            <input
+              className="input font-mono tracking-widest"
+              value={projectCode}
+              onChange={e => setProjectCode(e.target.value.toUpperCase().replace(/\s/g, ''))}
+              placeholder="SHPY916228"
+              maxLength={10}
+            />
+          </div>
+
+          {/* Block & Lot */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold mb-1.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                <Hash className="w-3 h-3" /> Block No. *
+              </label>
+              <input
+                className="input" type="number" min="1" step="1"
+                value={blockNo}
+                onChange={e => setBlockNo(e.target.value.replace(/\D/g, ''))}
+                placeholder="3"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                <Hash className="w-3 h-3" /> Lot No. *
+              </label>
+              <input
+                className="input" type="number" min="1" step="1"
+                value={lotNo}
+                onChange={e => setLotNo(e.target.value.replace(/\D/g, ''))}
+                placeholder="12"
+              />
+            </div>
+          </div>
+
+          {/* Phase */}
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>Phase</label>
+            <select className="input" value={phase} onChange={e => setPhase(e.target.value)}>
+              {PHASES.map(p => <option key={p}>{p}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          <button onClick={handleSave} disabled={saving} className="btn-primary flex items-center gap-1.5 py-2 text-sm">
+            <Save className="w-3.5 h-3.5" /> {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+          <button onClick={onClose} className="btn-ghost py-2 text-sm">Cancel</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main AdminClient ──────────────────────────────────────────────
 export default function AdminClient({
-  users,
+  users: initialUsers,
   currentProfile,
   stats,
 }: {
@@ -31,40 +193,57 @@ export default function AdminClient({
   currentProfile: Profile
   stats: { totalUsers: number; totalPosts: number; totalAnnouncements: number; totalMessages: number }
 }) {
-  const [tab, setTab] = useState<'overview' | 'users' | 'flags'>('overview')
-  const [roleUpdating, setRoleUpdating] = useState<string | null>(null)
-  const [resolvedFlags, setResolvedFlags] = useState<Set<string>>(new Set())
-  const [userSearch, setUserSearch] = useState('')
   const supabase = createClient()
+  const [tab, setTab] = useState<'overview' | 'residents' | 'flags'>('overview')
+  const [users, setUsers] = useState<Profile[]>(initialUsers)
+  const [userSearch, setUserSearch] = useState('')
+  const [verifyFilter, setVerifyFilter] = useState<'all' | 'pending' | 'verified'>('all')
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [editingUser, setEditingUser] = useState<Profile | null>(null)
+  const [resolvedFlags, setResolvedFlags] = useState<Set<string>>(new Set())
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    setRoleUpdating(userId)
-    await supabase.from('profiles').update({ role: newRole }).eq('id', userId)
-    setRoleUpdating(null)
+  // ── Verify / Unverify ──────────────────────────────────────────
+  const handleVerify = async (userId: string, verify: boolean) => {
+    setActionLoading(userId)
+    await supabase.from('profiles').update({ is_verified: verify }).eq('id', userId)
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_verified: verify } : u))
+    setActionLoading(null)
   }
 
-  const resolveFlag = (id: string) => {
-    setResolvedFlags(prev => new Set(prev).add(id))
+  // ── After edit saved ───────────────────────────────────────────
+  const handleUserSaved = (updated: Profile) => {
+    setUsers(prev => prev.map(u => u.id === updated.id ? updated : u))
   }
 
-  const filteredUsers = users.filter(u =>
-    u.full_name.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.unit.toLowerCase().includes(userSearch.toLowerCase())
-  )
+  // ── Filtering ──────────────────────────────────────────────────
+  const filteredUsers = users.filter(u => {
+    const matchesSearch =
+      u.full_name.toLowerCase().includes(userSearch.toLowerCase()) ||
+      (u.project_code ?? '').toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.unit.toLowerCase().includes(userSearch.toLowerCase())
+    const matchesVerify =
+      verifyFilter === 'all' ? true :
+      verifyFilter === 'pending' ? !u.is_verified :
+      u.is_verified
+    return matchesSearch && matchesVerify
+  })
+
+  const pendingCount = users.filter(u => !u.is_verified).length
 
   const statCards = [
-    { label: 'Total Residents', value: stats.totalUsers, icon: Users, color: 'text-brand-600' },
-    { label: 'Total Posts', value: stats.totalPosts, icon: FileText, color: 'text-blue-600' },
-    { label: 'Announcements', value: stats.totalAnnouncements, icon: Megaphone, color: 'text-yellow-600' },
-    { label: 'Chat Messages', value: stats.totalMessages, icon: MessageSquare, color: 'text-purple-600' },
+    { label: 'Total Residents',  value: stats.totalUsers,         icon: Users,        color: '#1b6b45' },
+    { label: 'Total Posts',       value: stats.totalPosts,         icon: FileText,     color: '#2563eb' },
+    { label: 'Announcements',     value: stats.totalAnnouncements, icon: Megaphone,    color: '#d97706' },
+    { label: 'Chat Messages',     value: stats.totalMessages,      icon: MessageSquare,color: '#7c3aed' },
   ]
 
   return (
-    <div>
+    <div className="max-w-6xl mx-auto">
+      {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Admin Panel</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Community governance and moderation tools</p>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Admin Panel</h1>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Community governance and moderation tools</p>
         </div>
         <span className="badge badge-red flex items-center gap-1">
           <ShieldAlert className="w-3 h-3" /> Admin Only
@@ -72,29 +251,41 @@ export default function AdminClient({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit">
-        {(['overview', 'users', 'flags'] as const).map(t => (
+      <div
+        className="flex gap-1 mb-6 p-1 rounded-lg w-fit"
+        style={{ background: 'var(--surface-2)' }}
+      >
+        {([
+          { key: 'overview',   label: 'Overview' },
+          { key: 'residents',  label: 'Residents' },
+          { key: 'flags',      label: 'Flagged' },
+        ] as const).map(({ key, label }) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={clsx(
-              'px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize',
-              tab === t
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-            )}
+            key={key}
+            onClick={() => setTab(key)}
+            className="px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5"
+            style={{
+              background: tab === key ? 'var(--surface)' : 'transparent',
+              color:      tab === key ? 'var(--text-primary)' : 'var(--text-muted)',
+              boxShadow:  tab === key ? 'var(--shadow-xs)' : 'none',
+            }}
           >
-            {t}
-            {t === 'flags' && (
-              <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+            {label}
+            {key === 'flags' && (
+              <span className="text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#ef4444' }}>
                 {MOCK_FLAGS.length - resolvedFlags.size}
+              </span>
+            )}
+            {key === 'residents' && pendingCount > 0 && (
+              <span className="text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#d97706' }}>
+                {pendingCount}
               </span>
             )}
           </button>
         ))}
       </div>
 
-      {/* OVERVIEW TAB */}
+      {/* ── OVERVIEW ── */}
       {tab === 'overview' && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -102,31 +293,47 @@ export default function AdminClient({
               <div key={label} className="card p-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{value}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                    <p className="text-2xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>{value}</p>
                   </div>
-                  <Icon className={`w-5 h-5 ${color} mt-0.5`} />
+                  <Icon className="w-5 h-5 mt-0.5" style={{ color }} />
                 </div>
               </div>
             ))}
           </div>
 
+          {/* Pending verification alert */}
+          {pendingCount > 0 && (
+            <div
+              className="flex items-center gap-3 p-4 rounded-xl mb-6 cursor-pointer"
+              style={{ background: '#fef6e4', border: '1px solid #fcd34d' }}
+              onClick={() => { setTab('residents'); setVerifyFilter('pending') }}
+            >
+              <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#fcd34d' }}>
+                <ShieldAlert className="w-4 h-4" style={{ color: '#92400e' }} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold" style={{ color: '#92400e' }}>
+                  {pendingCount} resident{pendingCount > 1 ? 's' : ''} pending verification
+                </p>
+                <p className="text-xs" style={{ color: '#b45309' }}>Click to review and approve</p>
+              </div>
+            </div>
+          )}
+
           <div className="card p-5">
-            <h3 className="font-bold text-sm text-gray-900 dark:text-gray-100 mb-4">Phase Breakdown</h3>
-            {['Phase 1 – Sampaguita', 'Phase 2 – Rosal', 'Phase 3 – Ilang-Ilang', 'Phase 4 – Dama de Noche'].map(phase => {
-              const count = users.filter(u => u.phase === phase).length
+            <h3 className="font-bold text-sm mb-4" style={{ color: 'var(--text-primary)' }}>Phase Breakdown</h3>
+            {['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4'].map(phase => {
+              const count = users.filter(u => u.phase === phase && u.is_verified).length
               const pct = stats.totalUsers > 0 ? Math.round((count / stats.totalUsers) * 100) : 0
               return (
                 <div key={phase} className="mb-3">
-                  <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                  <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--text-muted)' }}>
                     <span>{phase}</span>
-                    <span className="font-semibold">{count} residents ({pct}%)</span>
+                    <span className="font-semibold">{count} verified residents ({pct}%)</span>
                   </div>
-                  <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-brand-500 rounded-full transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: 'var(--brand)' }} />
                   </div>
                 </div>
               )
@@ -135,112 +342,203 @@ export default function AdminClient({
         </>
       )}
 
-      {/* USERS TAB */}
-      {tab === 'users' && (
+      {/* ── RESIDENTS ── */}
+      {tab === 'residents' && (
         <div className="card overflow-hidden">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
-            <input
-              className="input flex-1"
-              placeholder="Search residents…"
-              value={userSearch}
-              onChange={e => setUserSearch(e.target.value)}
-            />
-            <span className="text-xs text-gray-400 whitespace-nowrap">{filteredUsers.length} shown</span>
+          {/* Toolbar */}
+          <div
+            className="p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center"
+            style={{ borderBottom: '1px solid var(--border-soft)' }}
+          >
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
+              <input
+                className="input pl-9 w-full"
+                placeholder="Search by name, SHPY code, or unit…"
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+              />
+            </div>
+            {/* Filter pills */}
+            <div className="flex gap-1.5 flex-shrink-0">
+              {([
+                { key: 'all',     label: 'All' },
+                { key: 'pending', label: `Pending (${pendingCount})` },
+                { key: 'verified',label: 'Verified' },
+              ] as const).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setVerifyFilter(key)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    background: verifyFilter === key ? 'var(--brand)' : 'var(--surface-2)',
+                    color:      verifyFilter === key ? 'white' : 'var(--text-muted)',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
+              {filteredUsers.length} shown
+            </span>
           </div>
+
+          {/* Table — scrollable on mobile */}
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[700px]">
               <thead>
-                <tr className="bg-gray-50 dark:bg-gray-800/50">
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Resident</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Unit</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Phase</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Role</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Actions</th>
+                <tr style={{ background: 'var(--surface-2)' }}>
+                  {['Resident', 'SHPY Code', 'Block / Lot', 'Phase', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
+              <tbody>
                 {filteredUsers.map(user => (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                  <tr
+                    key={user.id}
+                    className="transition-colors"
+                    style={{ borderBottom: '1px solid var(--border-soft)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '')}
+                  >
+                    {/* Resident */}
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white"
+                          style={{ background: 'var(--brand)' }}
+                        >
                           {initials(user.full_name)}
                         </div>
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.full_name}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{user.full_name}</p>
+                          <span className={clsx('badge text-[10px]', roleBadgeClass(user.role))}>{user.role}</span>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{user.unit}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{user.phase}</td>
+
+                    {/* SHPY */}
                     <td className="px-4 py-3">
-                      <span className={clsx('badge', user.role === 'admin' ? 'badge-red' : user.role === 'moderator' ? 'badge-blue' : 'badge-green')}>
-                        {user.role}
+                      <span className="font-mono text-xs font-semibold tracking-widest" style={{ color: 'var(--text-primary)' }}>
+                        {user.project_code || <span style={{ color: 'var(--text-muted)' }}>—</span>}
                       </span>
                     </td>
+
+                    {/* Block / Lot */}
+                    <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>
+                      {user.block_no && user.lot_no
+                        ? `Blk ${user.block_no}, Lot ${user.lot_no}`
+                        : user.unit || '—'}
+                    </td>
+
+                    {/* Phase */}
+                    <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>{user.phase}</td>
+
+                    {/* Status */}
                     <td className="px-4 py-3">
-                      {user.id !== currentProfile.id && (
-                        <div className="flex items-center gap-2">
-                          <select
-                            defaultValue={user.role}
-                            disabled={roleUpdating === user.id}
-                            onChange={e => handleRoleChange(user.id, e.target.value)}
-                            className="input py-1 text-xs w-auto"
-                          >
-                            <option value="resident">Resident</option>
-                            <option value="moderator">Moderator</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </div>
+                      {user.is_verified ? (
+                        <span className="badge badge-green flex items-center gap-1 w-fit">
+                          <CheckCircle className="w-3 h-3" /> Verified
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full w-fit"
+                          style={{ background: '#fef6e4', color: '#b45309', border: '1px solid #fcd34d' }}>
+                          <XCircle className="w-3 h-3" /> Pending
+                        </span>
                       )}
-                      {user.id === currentProfile.id && (
-                        <span className="text-xs text-gray-400">You</span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-3">
+                      {user.id !== currentProfile.id ? (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {/* Verify / Unverify */}
+                          {!user.is_verified ? (
+                            <button
+                              onClick={() => handleVerify(user.id, true)}
+                              disabled={actionLoading === user.id}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                              style={{ background: '#dcfce7', color: '#166534', border: '1px solid #86efac' }}
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              {actionLoading === user.id ? '…' : 'Verify'}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleVerify(user.id, false)}
+                              disabled={actionLoading === user.id}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                              style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}
+                            >
+                              <ShieldOff className="w-3.5 h-3.5" />
+                              {actionLoading === user.id ? '…' : 'Un-verify'}
+                            </button>
+                          )}
+
+                          {/* Edit */}
+                          <button
+                            onClick={() => setEditingUser(user)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                            style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border-soft)' }}
+                          >
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>You</span>
                       )}
                     </td>
                   </tr>
                 ))}
+
+                {filteredUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-12 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+                      No residents match your search.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* FLAGS TAB */}
+      {/* ── FLAGS ── */}
       {tab === 'flags' && (
         <div className="card overflow-hidden">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-            <h3 className="font-bold text-sm text-gray-900 dark:text-gray-100">Flagged Content</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Review and moderate reported posts and users</p>
+          <div className="p-4" style={{ borderBottom: '1px solid var(--border-soft)' }}>
+            <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Flagged Content</h3>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Review and moderate reported posts and users</p>
           </div>
-          <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
+          <div>
             {MOCK_FLAGS.map(flag => {
               const resolved = resolvedFlags.has(flag.id)
               return (
-                <div key={flag.id} className={clsx('p-4 flex items-start gap-4 transition-colors', resolved && 'opacity-50')}>
+                <div key={flag.id}
+                  className={clsx('p-4 flex items-start gap-4 transition-colors', resolved && 'opacity-50')}
+                  style={{ borderBottom: '1px solid var(--border-soft)' }}
+                >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{flag.user}</span>
+                      <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{flag.user}</span>
                       <span className={`badge ${reasonBadge[flag.reason] || 'badge-gray'}`}>{flag.reason}</span>
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{flag.content}</p>
-                    <p className="text-xs text-gray-400 mt-1">{flag.time}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{flag.content}</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{flag.time}</p>
                   </div>
                   {resolved ? (
-                    <div className="flex items-center gap-1 text-brand-600 text-xs font-medium">
+                    <div className="flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--brand)' }}>
                       <CheckCircle className="w-4 h-4" /> Resolved
                     </div>
                   ) : (
                     <div className="flex gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => resolveFlag(flag.id)}
-                        className="btn-primary py-1.5 text-xs"
-                      >
-                        Remove
-                      </button>
-                      <button
-                        onClick={() => resolveFlag(flag.id)}
-                        className="btn-ghost py-1.5 text-xs"
-                      >
-                        Dismiss
-                      </button>
+                      <button onClick={() => setResolvedFlags(p => new Set(p).add(flag.id))} className="btn-primary py-1.5 text-xs">Remove</button>
+                      <button onClick={() => setResolvedFlags(p => new Set(p).add(flag.id))} className="btn-ghost py-1.5 text-xs">Dismiss</button>
                     </div>
                   )}
                 </div>
@@ -248,6 +546,15 @@ export default function AdminClient({
             })}
           </div>
         </div>
+      )}
+
+      {/* Edit modal */}
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSaved={handleUserSaved}
+        />
       )}
     </div>
   )
