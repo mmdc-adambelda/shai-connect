@@ -287,7 +287,7 @@ export default function ProfileClient({
                 <span className="font-mono font-semibold tracking-widest" style={{ color: 'var(--text-primary)' }}>
                   {profile?.project_code || '—'}
                 </span>
-                <Lock className="w-3 h-3" title="Managed by HOA Admin" style={{ color: 'var(--text-muted)' }} />
+                <span title="Managed by HOA Admin"><Lock className="w-3 h-3" style={{ color: 'var(--text-muted)' }} /></span>
               </div>
               {profile?.bio && <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{profile.bio}</p>}
             </div>
