@@ -9,7 +9,7 @@ export default async function FeedPage() {
   // Fetch posts + author profiles in one query
   const { data: rawPosts } = await supabase
     .from('posts')
-    .select('*, profiles(id, full_name, unit, phase, role)')
+    .select('*, profiles(id, full_name, unit, phase, role, avatar_url)')
     .order('created_at', { ascending: false })
     .limit(30)
 
