@@ -13,8 +13,8 @@ export default async function AdminPage() {
     .eq('id', user.id)
     .single()
 
-  // Only admins and moderators can access
-  if (!profile || !['admin', 'moderator'].includes(profile.role)) {
+  // Allow superadmin, admin, and moderator
+  if (!profile || !['superadmin', 'admin', 'moderator'].includes(profile.role)) {
     redirect('/feed')
   }
 
