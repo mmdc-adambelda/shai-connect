@@ -496,21 +496,15 @@ function PostCard({
       )}
 
       {post.image_url && !post.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
-        
-          href={post.image_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mb-3 flex items-center gap-2 p-3 rounded-xl text-sm font-medium transition-colors"
+        <div
+          onClick={() => window.open(post.image_url!, '_blank', 'noopener,noreferrer')}
+          className="mb-3 flex items-center gap-2 p-3 rounded-xl text-sm font-medium transition-colors cursor-pointer"
           style={{ background: 'var(--brand-xlight)', color: 'var(--brand)' }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = 'var(--brand-light)')
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = 'var(--brand-xlight)')
-          }
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-light)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-xlight)')}
         >
           <Paperclip className="w-4 h-4" /> View attachment
-        </a>
+        </div>
       )}
 
       <ReactionBar
