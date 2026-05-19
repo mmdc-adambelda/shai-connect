@@ -5,6 +5,7 @@ import { useTheme } from '@/components/ui/ThemeProvider'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import AvatarUI from '@/components/ui/Avatar'
 import type { Profile } from '@/types'
 
 const MOCK_NOTIFICATIONS = [
@@ -13,14 +14,7 @@ const MOCK_NOTIFICATIONS = [
   { id: '3', icon: MessageSquare,  label: 'New message from HOA Admin', desc: 'Your gate pass request has been approved.',   time: '1d ago', read: true,  color: 'text-blue-600' },
 ]
 
-function Avatar({ name, size = 32 }: { name: string; size?: number }) {
-  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-  return (
-    <div className="avatar font-bold" style={{ width: size, height: size, fontSize: size * 0.35 }}>
-      {initials}
-    </div>
-  )
-}
+
 
 interface TopbarProps {
   profile: Profile | null
@@ -157,7 +151,7 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
 
       {/* User chip */}
       <div className="flex items-center gap-2 pl-2 ml-1" style={{ borderLeft: '1px solid var(--border-soft)' }}>
-        <Avatar name={profile?.full_name || 'Me'} size={30} />
+        <AvatarUI name={profile?.full_name || 'Me'} avatarUrl={profile?.avatar_url} size={30} />
         <div className="hidden sm:block">
           <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>
             {profile?.full_name || 'Resident'}
