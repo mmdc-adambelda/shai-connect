@@ -3,12 +3,13 @@ export type Role = 'resident' | 'moderator' | 'admin' | 'superadmin'
 export interface Profile {
   id: string
   full_name: string
-  unit: string          // kept for legacy display (e.g. "Block 3, Lot 12")
+  unit: string
   block_no: number | null
   lot_no: number | null
   phase: string
   role: Role
   project_code: string | null
+  is_verified: boolean
   avatar_url?: string | null
   bio?: string | null
   created_at: string
