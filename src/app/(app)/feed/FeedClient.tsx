@@ -10,39 +10,26 @@ import {
 import type { Post, Profile, Comment, ReactionType } from '@/types'
 import clsx from 'clsx'
 import { useReactions } from '@/hooks/useEngagement'
+import AvatarUI from '@/components/ui/Avatar'
 
-// ── Constants ──────────────────────────────────────────────────
 const PHASES = ['All Phases', 'Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
 
 const REACTIONS: { type: ReactionType; emoji: string; label: string }[] = [
-  { type: 'like',  emoji: '👍', label: 'Like' },
-  { type: 'love',  emoji: '❤️', label: 'Love' },
-  { type: 'haha',  emoji: '😂', label: 'Haha' },
-  { type: 'wow',   emoji: '😮', label: 'Wow'  },
-  { type: 'sad',   emoji: '😢', label: 'Sad'  },
+  { type: 'like',  emoji: '👍', label: 'Like'  },
+  { type: 'love',  emoji: '❤️', label: 'Love'  },
+  { type: 'haha',  emoji: '😂', label: 'Haha'  },
+  { type: 'wow',   emoji: '😮', label: 'Wow'   },
+  { type: 'sad',   emoji: '😢', label: 'Sad'   },
   { type: 'angry', emoji: '😡', label: 'Angry' },
 ]
 
-// ── Sub-components ─────────────────────────────────────────────
-function Avatar({ name, size = 40 }: { name: string; size?: number }) {
-  const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
-  return (
-    <div
-      className="avatar font-bold flex-shrink-0"
-      style={{ width: size, height: size, fontSize: size * 0.35 }}
-    >
-      {initials}
-    </div>
-  )
-}
-
 function RoleBadge({ role }: { role: string }) {
-  if (role === 'admin')     return <span className="badge badge-red">Admin</span>
-  if (role === 'moderator') return <span className="badge badge-blue">Mod</span>
+  if (role === 'superadmin') return <span className="badge badge-red">Super Admin</span>
+  if (role === 'admin')      return <span className="badge badge-red">Admin</span>
+  if (role === 'moderator')  return <span className="badge badge-blue">Mod</span>
   return null
 }
 
-// ── Reaction Picker ────────────────────────────────────────────
 function ReactionBar({ postId, initialCounts, initialUserReaction }: {
   postId: string
   initialCounts: Record<string, number>
@@ -53,7 +40,7 @@ function ReactionBar({ postId, initialCounts, initialUserReaction }: {
     userReaction: initialUserReaction,
     total: Object.values(initialCounts).reduce((a, b) => a + b, 0),
   })
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerOpen, setPickerOpen]   = useState(false)
   const [showComments, setShowComments] = useState(false)
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -64,11 +51,9 @@ function ReactionBar({ postId, initialCounts, initialUserReaction }: {
     .filter(Boolean)
 
   const currentReaction = REACTIONS.find(r => r.type === userReaction)
-  const defaultLabel = 'Like'
 
   return (
     <>
-      {/* Reaction summary row */}
       {total > 0 && (
         <div className="flex items-center gap-1.5 mb-2 px-1">
           <div className="flex -space-x-0.5">
@@ -80,12 +65,9 @@ function ReactionBar({ postId, initialCounts, initialUserReaction }: {
         </div>
       )}
 
-      {/* Divider */}
       <div className="divider mb-1" />
 
-      {/* Action bar */}
       <div className="flex items-center gap-0.5 pt-1 relative">
-        {/* Like button with hover picker */}
         <div
           className="relative"
           onMouseEnter={() => {
@@ -97,32 +79,21 @@ function ReactionBar({ postId, initialCounts, initialUserReaction }: {
             hoverTimeout.current = setTimeout(() => setPickerOpen(false), 200)
           }}
         >
-          <button
-            onClick={() => react(userReaction || 'like')}
-            disabled={loading}
-            className={clsx('reaction-btn', userReaction && 'active')}
-          >
-            <span className="text-base leading-none">
-              {currentReaction ? currentReaction.emoji : '👍'}
-            </span>
-            <span>{currentReaction ? currentReaction.label : defaultLabel}</span>
+          <button onClick={() => react(userReaction || 'like')} disabled={loading}
+            className={clsx('reaction-btn', userReaction && 'active')}>
+            <span className="text-base leading-none">{currentReaction ? currentReaction.emoji : '👍'}</span>
+            <span>{currentReaction ? currentReaction.label : 'Like'}</span>
           </button>
 
           {pickerOpen && (
             <div
               className="reaction-picker absolute bottom-full left-0 mb-2 z-20"
               onMouseEnter={() => { if (hoverTimeout.current) clearTimeout(hoverTimeout.current) }}
-              onMouseLeave={() => {
-                hoverTimeout.current = setTimeout(() => setPickerOpen(false), 150)
-              }}
+              onMouseLeave={() => { hoverTimeout.current = setTimeout(() => setPickerOpen(false), 150) }}
             >
               {REACTIONS.map(r => (
-                <button
-                  key={r.type}
-                  className="reaction-emoji"
-                  title={r.label}
-                  onClick={() => { react(r.type); setPickerOpen(false) }}
-                >
+                <button key={r.type} className="reaction-emoji" title={r.label}
+                  onClick={() => { react(r.type); setPickerOpen(false) }}>
                   {r.emoji}
                 </button>
               ))}
@@ -130,50 +101,38 @@ function ReactionBar({ postId, initialCounts, initialUserReaction }: {
           )}
         </div>
 
-        <button
-          onClick={() => setShowComments(v => !v)}
-          className="reaction-btn"
-        >
-          <MessageCircle className="w-4 h-4" />
-          <span>Comment</span>
+        <button onClick={() => setShowComments(v => !v)} className="reaction-btn">
+          <MessageCircle className="w-4 h-4" /><span>Comment</span>
         </button>
-
         <button className="reaction-btn ml-auto">
-          <Share2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Share</span>
+          <Share2 className="w-4 h-4" /><span className="hidden sm:inline">Share</span>
         </button>
       </div>
 
-      {/* Comments section */}
       {showComments && <CommentsSection postId={postId} />}
     </>
   )
 }
 
-// ── Comments Section ───────────────────────────────────────────
 function CommentsSection({ postId }: { postId: string }) {
-  const [comments, setComments] = useState<Comment[]>([])
-  const [loading, setLoading] = useState(false)
-  const [loaded, setLoaded] = useState(false)
-  const [total, setTotal] = useState(0)
-  const [text, setText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const [comments, setComments]             = useState<Comment[]>([])
+  const [loading, setLoading]               = useState(false)
+  const [loaded, setLoaded]                 = useState(false)
+  const [text, setText]                     = useState('')
+  const [submitting, setSubmitting]         = useState(false)
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({})
-  const [replyingTo, setReplyingTo] = useState<string | null>(null)
-  const [replyText, setReplyText] = useState('')
+  const [replyingTo, setReplyingTo]         = useState<string | null>(null)
+  const [replyText, setReplyText]           = useState('')
 
   const loadComments = useCallback(async () => {
     if (loading) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/posts/${postId}/comments?limit=20`)
+      const res  = await fetch(`/api/posts/${postId}/comments?limit=20`)
       const data = await res.json()
       setComments(data.comments ?? [])
-      setTotal(data.total ?? 0)
       setLoaded(true)
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }, [postId, loading])
 
   if (!loaded && !loading) loadComments()
@@ -183,7 +142,7 @@ function CommentsSection({ postId }: { postId: string }) {
     if (!content) return
     setSubmitting(true)
     try {
-      const res = await fetch(`/api/posts/${postId}/comments`, {
+      const res  = await fetch(`/api/posts/${postId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, parent_id: parentId ?? null }),
@@ -199,14 +158,11 @@ function CommentsSection({ postId }: { postId: string }) {
               ? { ...c, replies: [...(c.replies ?? []), data.comment] }
               : c
           ))
-          setReplyText('')
-          setReplyingTo(null)
+          setReplyText(''); setReplyingTo(null)
           setExpandedReplies(prev => ({ ...prev, [parentId]: true }))
         }
       }
-    } finally {
-      setSubmitting(false)
-    }
+    } finally { setSubmitting(false) }
   }
 
   return (
@@ -217,18 +173,16 @@ function CommentsSection({ postId }: { postId: string }) {
         </div>
       )}
 
-      {/* Comment list */}
       <div className="space-y-1">
         {comments.map(comment => {
-          const author = comment.profiles as unknown as Profile
-          const hasReplies = (comment.replies?.length ?? 0) > 0
+          const author      = comment.profiles as unknown as Profile
+          const hasReplies  = (comment.replies?.length ?? 0) > 0
           const repliesOpen = expandedReplies[comment.id]
 
           return (
             <div key={comment.id} className="animate-appear">
-              {/* Top-level comment */}
               <div className="flex gap-2.5 py-1.5">
-                <Avatar name={author?.full_name || 'Resident'} size={30} />
+                <AvatarUI name={author?.full_name || 'Resident'} avatarUrl={author?.avatar_url} size={30} />
                 <div className="flex-1 min-w-0">
                   <div className="comment-bubble">
                     <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>
@@ -256,7 +210,7 @@ function CommentsSection({ postId }: { postId: string }) {
                     </button>
                     {hasReplies && (
                       <button
-                        className="flex items-center gap-1 text-[11px] font-semibold transition-colors"
+                        className="flex items-center gap-1 text-[11px] font-semibold"
                         style={{ color: 'var(--brand)' }}
                         onClick={() => setExpandedReplies(p => ({ ...p, [comment.id]: !p[comment.id] }))}
                       >
@@ -268,14 +222,13 @@ function CommentsSection({ postId }: { postId: string }) {
                 </div>
               </div>
 
-              {/* Nested replies */}
               {repliesOpen && comment.replies && (
                 <div className="ml-10 pl-3 space-y-1" style={{ borderLeft: '2px solid var(--border)' }}>
                   {comment.replies.map(reply => {
                     const replyAuthor = reply.profiles as unknown as Profile
                     return (
                       <div key={reply.id} className="flex gap-2 py-1.5 animate-appear">
-                        <Avatar name={replyAuthor?.full_name || 'Resident'} size={26} />
+                        <AvatarUI name={replyAuthor?.full_name || 'Resident'} avatarUrl={replyAuthor?.avatar_url} size={26} />
                         <div className="flex-1 min-w-0">
                           <div className="comment-bubble" style={{ borderRadius: '0 10px 10px 10px' }}>
                             <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>
@@ -295,7 +248,6 @@ function CommentsSection({ postId }: { postId: string }) {
                 </div>
               )}
 
-              {/* Reply input */}
               {replyingTo === comment.id && (
                 <div className="ml-10 mt-1.5 flex gap-2 animate-appear">
                   <input
@@ -306,12 +258,9 @@ function CommentsSection({ postId }: { postId: string }) {
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(comment.id) } }}
                     autoFocus
                   />
-                  <button
-                    className="btn-icon"
-                    disabled={!replyText.trim() || submitting}
+                  <button className="btn-icon" disabled={!replyText.trim() || submitting}
                     onClick={() => submitComment(comment.id)}
-                    style={{ background: replyText.trim() ? 'var(--brand)' : undefined, color: replyText.trim() ? 'white' : undefined }}
-                  >
+                    style={{ background: replyText.trim() ? 'var(--brand)' : undefined, color: replyText.trim() ? 'white' : undefined }}>
                     {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                   </button>
                 </div>
@@ -321,21 +270,12 @@ function CommentsSection({ postId }: { postId: string }) {
         })}
       </div>
 
-      {/* New comment input */}
       <div className="flex gap-2 mt-3">
-        <input
-          className="input text-sm py-2 flex-1"
-          placeholder="Write a comment…"
-          value={text}
-          onChange={e => setText(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment() } }}
-        />
-        <button
-          className="btn-icon"
-          disabled={!text.trim() || submitting}
-          onClick={() => submitComment()}
-          style={{ background: text.trim() ? 'var(--brand)' : undefined, color: text.trim() ? 'white' : undefined }}
-        >
+        <input className="input text-sm py-2 flex-1" placeholder="Write a comment…"
+          value={text} onChange={e => setText(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment() } }} />
+        <button className="btn-icon" disabled={!text.trim() || submitting} onClick={() => submitComment()}
+          style={{ background: text.trim() ? 'var(--brand)' : undefined, color: text.trim() ? 'white' : undefined }}>
           {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
         </button>
       </div>
@@ -343,21 +283,17 @@ function CommentsSection({ postId }: { postId: string }) {
   )
 }
 
-// ── Post Card ──────────────────────────────────────────────────
 function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }) {
-  const author = post.profiles as unknown as Profile
+  const author   = post.profiles as unknown as Profile
   const [menuOpen, setMenuOpen] = useState(false)
 
   const reactionCounts: Record<string, number> = {}
-  for (const rc of post.reaction_counts ?? []) {
-    reactionCounts[rc.type] = rc.count
-  }
+  for (const rc of post.reaction_counts ?? []) reactionCounts[rc.type] = rc.count
 
   return (
     <div className="card animate-appear" style={{ padding: '20px' }}>
-      {/* Author row */}
       <div className="flex items-start gap-3 mb-3">
-        <Avatar name={author?.full_name || 'Resident'} size={42} />
+        <AvatarUI name={author?.full_name || 'Resident'} avatarUrl={author?.avatar_url} size={42} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
@@ -370,12 +306,8 @@ function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }
             {author?.unit} · {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
           </p>
         </div>
-        {/* More menu */}
         <div className="relative">
-          <button
-            className="btn-icon w-8 h-8"
-            onClick={() => setMenuOpen(v => !v)}
-          >
+          <button className="btn-icon w-8 h-8" onClick={() => setMenuOpen(v => !v)}>
             <MoreHorizontal className="w-4 h-4" />
           </button>
           {menuOpen && (
@@ -401,58 +333,43 @@ function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }
         </div>
       </div>
 
-      {/* Content */}
       <p className="text-sm leading-relaxed whitespace-pre-wrap mb-3" style={{ color: 'var(--text-primary)' }}>
         {post.content}
       </p>
 
-      {/* Image */}
       {post.image_url && post.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
         <div className="mb-3 overflow-hidden rounded-xl border" style={{ borderColor: 'var(--border-soft)' }}>
-          <img
-            src={post.image_url}
-            alt="Post attachment"
-            className="w-full object-cover max-h-80"
-          />
+          <img src={post.image_url} alt="Post attachment" className="w-full object-cover max-h-80" />
         </div>
       )}
-
-      {/* File attachment */}
       {post.image_url && !post.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
         <a href={post.image_url} target="_blank" rel="noopener noreferrer"
           className="mb-3 flex items-center gap-2 p-3 rounded-xl text-sm font-medium transition-colors"
-          style={{ background: 'var(--brand-xlight)', color: 'var(--brand)', borderRadius: 'var(--radius-md)' }}
+          style={{ background: 'var(--brand-xlight)', color: 'var(--brand)' }}
           onMouseEnter={e => (e.currentTarget.style.background = 'var(--brand-light)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'var(--brand-xlight)')}>
-          <Paperclip className="w-4 h-4" />
-          View attachment
+          <Paperclip className="w-4 h-4" /> View attachment
         </a>
       )}
 
-      {/* Reactions + Comments */}
-      <ReactionBar
-        postId={post.id}
-        initialCounts={reactionCounts}
-        initialUserReaction={post.user_reaction ?? null}
-      />
+      <ReactionBar postId={post.id} initialCounts={reactionCounts} initialUserReaction={post.user_reaction ?? null} />
     </div>
   )
 }
 
-// ── Compose Modal ──────────────────────────────────────────────
 function ComposeModal({ currentProfile, currentUserId, onPost, onClose }: {
   currentProfile: Profile | null
   currentUserId: string
   onPost: (post: Post) => void
   onClose: () => void
 }) {
-  const [content, setContent] = useState('')
-  const [phaseTag, setPhaseTag] = useState('All Phases')
-  const [posting, setPosting] = useState(false)
+  const [content, setContent]           = useState('')
+  const [phaseTag, setPhaseTag]         = useState('All Phases')
+  const [posting, setPosting]           = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [fileError, setFileError] = useState('')
+  const [fileError, setFileError]       = useState('')
   const photoInputRef = useRef<HTMLInputElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef  = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -468,9 +385,10 @@ function ComposeModal({ currentProfile, currentUserId, onPost, onClose }: {
     setPosting(true)
     let image_url = null
     if (selectedFile) {
-      const ext = selectedFile.name.split('.').pop()
+      const ext  = selectedFile.name.split('.').pop()
       const path = `posts/${currentUserId}/${Date.now()}.${ext}`
-      const { data: up, error: upErr } = await supabase.storage.from('shai-uploads').upload(path, selectedFile, { upsert: true })
+      const { data: up, error: upErr } = await supabase.storage
+        .from('shai-uploads').upload(path, selectedFile, { upsert: true })
       if (!upErr && up) {
         const { data: urlData } = supabase.storage.from('shai-uploads').getPublicUrl(path)
         image_url = urlData.publicUrl
@@ -478,7 +396,7 @@ function ComposeModal({ currentProfile, currentUserId, onPost, onClose }: {
     }
     const { data, error } = await supabase.from('posts')
       .insert({ content: content.trim(), phase_tag: phaseTag, author_id: currentUserId, image_url })
-      .select('*, profiles(id, full_name, unit, phase, role)')
+      .select('*, profiles(id, full_name, unit, phase, role, avatar_url)')
       .single()
     if (!error && data) { onPost(data); onClose() }
     setPosting(false)
@@ -487,63 +405,58 @@ function ComposeModal({ currentProfile, currentUserId, onPost, onClose }: {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-panel" onClick={e => e.stopPropagation()}>
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border-soft)' }}>
           <h2 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>Create Post</h2>
           <button onClick={onClose} className="btn-icon w-7 h-7"><X className="w-4 h-4" /></button>
         </div>
-
-        {/* Body */}
         <div className="flex-1 overflow-y-auto p-5">
           <div className="flex gap-3 mb-4">
-            <Avatar name={currentProfile?.full_name || 'Me'} size={42} />
+            <AvatarUI name={currentProfile?.full_name || 'Me'} avatarUrl={currentProfile?.avatar_url} size={42} />
             <div>
               <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{currentProfile?.full_name}</p>
-              <select className="input mt-1 py-1.5 text-xs w-auto h-auto" value={phaseTag} onChange={e => setPhaseTag(e.target.value)}
-                style={{ borderRadius: '99px', paddingLeft: 10, paddingRight: 24 }}>
+              <select className="input py-1 text-xs mt-1 w-auto"
+                value={phaseTag} onChange={e => setPhaseTag(e.target.value)}>
                 {PHASES.map(p => <option key={p}>{p}</option>)}
               </select>
             </div>
           </div>
-
           <textarea
-            className="input resize-none text-sm"
+            className="w-full resize-none text-sm leading-relaxed outline-none bg-transparent"
+            style={{ color: 'var(--text-primary)', minHeight: 120 }}
             placeholder={`What's on your mind, ${currentProfile?.full_name?.split(' ')[0] || 'neighbor'}?`}
             value={content}
             onChange={e => setContent(e.target.value)}
-            rows={5}
             autoFocus
-            style={{ minHeight: 120 }}
           />
-
           {selectedFile && (
-            <div className="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium"
-              style={{ background: 'var(--brand-xlight)', color: 'var(--brand)' }}>
-              <Paperclip className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate flex-1">{selectedFile.name}</span>
-              <button onClick={() => setSelectedFile(null)} className="btn-icon w-6 h-6"><X className="w-3.5 h-3.5" /></button>
+            <div className="mt-2 flex items-center gap-2 text-xs p-2 rounded-lg"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
+              <Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">{selectedFile.name}</span>
+              <button onClick={() => setSelectedFile(null)} className="ml-auto btn-icon w-5 h-5 flex-shrink-0">
+                <X className="w-3 h-3" />
+              </button>
             </div>
           )}
-          {fileError && <p className="mt-1.5 text-xs text-red-500">{fileError}</p>}
+          {fileError && <p className="text-xs text-red-500 mt-1">{fileError}</p>}
+          <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+          <input ref={fileInputRef}  type="file" accept=".pdf,.doc,.docx,.txt" className="hidden" onChange={handleFileSelect} />
         </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-5 py-3.5" style={{ borderTop: '1px solid var(--border-soft)' }}>
+        <div className="px-5 py-4 flex items-center justify-between" style={{ borderTop: '1px solid var(--border-soft)' }}>
           <div className="flex gap-1">
-            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-            <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" className="hidden" onChange={handleFileSelect} />
-            <button type="button" onClick={() => { if (photoInputRef.current) { photoInputRef.current.value = ''; photoInputRef.current.click() } }}
+            <button type="button"
+              onClick={() => { if (photoInputRef.current) { photoInputRef.current.value = ''; photoInputRef.current.click() } }}
               className="btn-ghost py-2 px-3 text-xs gap-1.5">
               <ImagePlus className="w-4 h-4" /> Photo
             </button>
-            <button type="button" onClick={() => { if (fileInputRef.current) { fileInputRef.current.value = ''; fileInputRef.current.click() } }}
+            <button type="button"
+              onClick={() => { if (fileInputRef.current) { fileInputRef.current.value = ''; fileInputRef.current.click() } }}
               className="btn-ghost py-2 px-3 text-xs gap-1.5">
               <FileText className="w-4 h-4" /> File
             </button>
           </div>
           <button onClick={handlePost} disabled={posting || !content.trim()} className="btn-primary gap-2">
-            {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-            Post
+            {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null} Post
           </button>
         </div>
       </div>
@@ -551,68 +464,13 @@ function ComposeModal({ currentProfile, currentUserId, onPost, onClose }: {
   )
 }
 
-// ── Main Feed ──────────────────────────────────────────────────
 export default function FeedClient({ posts: initial, currentProfile, currentUserId }: {
   posts: Post[]
   currentProfile: Profile | null
   currentUserId: string
 }) {
-  const [posts, setPosts] = useState(initial)
+  const [posts, setPosts]             = useState(initial)
   const [showCompose, setShowCompose] = useState(false)
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="font-display text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Community Feed</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Share updates with your neighbors</p>
-        </div>
-        <button onClick={() => setShowCompose(true)} className="btn-primary">
-          <span className="text-base leading-none">+</span> New Post
-        </button>
-      </div>
-
-      {/* Quick compose */}
-      <div
-        className="card p-3.5 mb-5 flex gap-3 items-center cursor-pointer transition-all hover:shadow-md"
-        onClick={() => setShowCompose(true)}
-        style={{ borderRadius: 'var(--radius-lg)' }}
-      >
-        <Avatar name={currentProfile?.full_name || 'Me'} size={38} />
-        <div
-          className="flex-1 px-4 py-2.5 text-sm rounded-full transition-colors"
-          style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', cursor: 'text' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface-2)')}
-        >
-          What&apos;s on your mind, {currentProfile?.full_name?.split(' ')[0] || 'neighbor'}?
-        </div>
-      </div>
-
-      {/* Posts */}
-      <div className="space-y-4">
-        {posts.length === 0 && (
-          <div className="card p-14 text-center">
-            <p className="text-4xl mb-4">🌿</p>
-            <p className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No posts yet</p>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Be the first to share something with the community!</p>
-          </div>
-        )}
-        {posts.map(post => (
-          <PostCard key={post.id} post={post} currentUserId={currentUserId} />
-        ))}
-      </div>
-
-      {/* Compose modal */}
-      {showCompose && (
-        <ComposeModal
-          currentProfile={currentProfile}
-          currentUserId={currentUserId}
-          onPost={p => setPosts([p, ...posts])}
-          onClose={() => setShowCompose(false)}
-        />
-      )}
-    </div>
-  )
-}
+    <div class
