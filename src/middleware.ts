@@ -6,6 +6,7 @@ export async function middleware(request: NextRequest) {
 
   const isPublic =
     pathname.startsWith('/auth') ||
+    pathname.startsWith('/pending') ||
     pathname.startsWith('/api/')
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -42,16 +43,41 @@ export async function middleware(request: NextRequest) {
   try {
     const { data: { user } } = await supabase.auth.getUser()
 
+    // Not logged in → send to auth
     if (!user && !isPublic) {
       const url = request.nextUrl.clone()
       url.pathname = '/auth'
       return NextResponse.redirect(url)
     }
 
+    // Logged in + on /auth → send away
     if (user && pathname === '/auth') {
       const url = request.nextUrl.clone()
       url.pathname = '/feed'
       return NextResponse.redirect(url)
+    }
+
+    // Logged in → check verification status
+    if (user && !isPublic) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_verified, role')
+        .eq('id', user.id)
+        .single()
+
+      // Unverified users can only see /pending
+      if (profile && !profile.is_verified && pathname !== '/pending') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/pending'
+        return NextResponse.redirect(url)
+      }
+
+      // Verified user trying to access /pending → send to feed
+      if (profile && profile.is_verified && pathname === '/pending') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/feed'
+        return NextResponse.redirect(url)
+      }
     }
   } catch {
     if (!isPublic) {
@@ -66,6 +92,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
