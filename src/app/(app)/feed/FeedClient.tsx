@@ -40,7 +40,7 @@ function ReactionBar({ postId, initialCounts, initialUserReaction }: {
     userReaction: initialUserReaction,
     total: Object.values(initialCounts).reduce((a, b) => a + b, 0),
   })
-  const [pickerOpen, setPickerOpen]   = useState(false)
+  const [pickerOpen, setPickerOpen]     = useState(false)
   const [showComments, setShowComments] = useState(false)
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -79,9 +79,14 @@ function ReactionBar({ postId, initialCounts, initialUserReaction }: {
             hoverTimeout.current = setTimeout(() => setPickerOpen(false), 200)
           }}
         >
-          <button onClick={() => react(userReaction || 'like')} disabled={loading}
-            className={clsx('reaction-btn', userReaction && 'active')}>
-            <span className="text-base leading-none">{currentReaction ? currentReaction.emoji : '👍'}</span>
+          <button
+            onClick={() => react(userReaction || 'like')}
+            disabled={loading}
+            className={clsx('reaction-btn', userReaction && 'active')}
+          >
+            <span className="text-base leading-none">
+              {currentReaction ? currentReaction.emoji : '👍'}
+            </span>
             <span>{currentReaction ? currentReaction.label : 'Like'}</span>
           </button>
 
@@ -102,10 +107,13 @@ function ReactionBar({ postId, initialCounts, initialUserReaction }: {
         </div>
 
         <button onClick={() => setShowComments(v => !v)} className="reaction-btn">
-          <MessageCircle className="w-4 h-4" /><span>Comment</span>
+          <MessageCircle className="w-4 h-4" />
+          <span>Comment</span>
         </button>
+
         <button className="reaction-btn ml-auto">
-          <Share2 className="w-4 h-4" /><span className="hidden sm:inline">Share</span>
+          <Share2 className="w-4 h-4" />
+          <span className="hidden sm:inline">Share</span>
         </button>
       </div>
 
@@ -115,14 +123,14 @@ function ReactionBar({ postId, initialCounts, initialUserReaction }: {
 }
 
 function CommentsSection({ postId }: { postId: string }) {
-  const [comments, setComments]             = useState<Comment[]>([])
-  const [loading, setLoading]               = useState(false)
-  const [loaded, setLoaded]                 = useState(false)
-  const [text, setText]                     = useState('')
-  const [submitting, setSubmitting]         = useState(false)
+  const [comments, setComments]               = useState<Comment[]>([])
+  const [loading, setLoading]                 = useState(false)
+  const [loaded, setLoaded]                   = useState(false)
+  const [text, setText]                       = useState('')
+  const [submitting, setSubmitting]           = useState(false)
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({})
-  const [replyingTo, setReplyingTo]         = useState<string | null>(null)
-  const [replyText, setReplyText]           = useState('')
+  const [replyingTo, setReplyingTo]           = useState<string | null>(null)
+  const [replyText, setReplyText]             = useState('')
 
   const loadComments = useCallback(async () => {
     if (loading) return
@@ -132,7 +140,9 @@ function CommentsSection({ postId }: { postId: string }) {
       const data = await res.json()
       setComments(data.comments ?? [])
       setLoaded(true)
-    } finally { setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }, [postId, loading])
 
   if (!loaded && !loading) loadComments()
@@ -158,18 +168,22 @@ function CommentsSection({ postId }: { postId: string }) {
               ? { ...c, replies: [...(c.replies ?? []), data.comment] }
               : c
           ))
-          setReplyText(''); setReplyingTo(null)
+          setReplyText('')
+          setReplyingTo(null)
           setExpandedReplies(prev => ({ ...prev, [parentId]: true }))
         }
       }
-    } finally { setSubmitting(false) }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
     <div className="mt-2 pt-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
       {loading && (
         <div className="py-4 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-          <Loader2 className="w-4 h-4 animate-spin inline mr-2" />Loading comments…
+          <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+          Loading comments…
         </div>
       )}
 
@@ -182,7 +196,11 @@ function CommentsSection({ postId }: { postId: string }) {
           return (
             <div key={comment.id} className="animate-appear">
               <div className="flex gap-2.5 py-1.5">
-                <AvatarUI name={author?.full_name || 'Resident'} avatarUrl={author?.avatar_url} size={30} />
+                <AvatarUI
+                  name={author?.full_name || 'Resident'}
+                  avatarUrl={author?.avatar_url}
+                  size={30}
+                />
                 <div className="flex-1 min-w-0">
                   <div className="comment-bubble">
                     <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>
@@ -214,8 +232,11 @@ function CommentsSection({ postId }: { postId: string }) {
                         style={{ color: 'var(--brand)' }}
                         onClick={() => setExpandedReplies(p => ({ ...p, [comment.id]: !p[comment.id] }))}
                       >
-                        {repliesOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                        {comment.replies!.length} {comment.replies!.length === 1 ? 'reply' : 'replies'}
+                        {repliesOpen
+                          ? <ChevronUp className="w-3 h-3" />
+                          : <ChevronDown className="w-3 h-3" />}
+                        {comment.replies!.length}{' '}
+                        {comment.replies!.length === 1 ? 'reply' : 'replies'}
                       </button>
                     )}
                   </div>
@@ -228,7 +249,11 @@ function CommentsSection({ postId }: { postId: string }) {
                     const replyAuthor = reply.profiles as unknown as Profile
                     return (
                       <div key={reply.id} className="flex gap-2 py-1.5 animate-appear">
-                        <AvatarUI name={replyAuthor?.full_name || 'Resident'} avatarUrl={replyAuthor?.avatar_url} size={26} />
+                        <AvatarUI
+                          name={replyAuthor?.full_name || 'Resident'}
+                          avatarUrl={replyAuthor?.avatar_url}
+                          size={26}
+                        />
                         <div className="flex-1 min-w-0">
                           <div className="comment-bubble" style={{ borderRadius: '0 10px 10px 10px' }}>
                             <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>
@@ -255,13 +280,26 @@ function CommentsSection({ postId }: { postId: string }) {
                     placeholder={`Reply to ${(comment.profiles as unknown as Profile)?.full_name?.split(' ')[0]}…`}
                     value={replyText}
                     onChange={e => setReplyText(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(comment.id) } }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        submitComment(comment.id)
+                      }
+                    }}
                     autoFocus
                   />
-                  <button className="btn-icon" disabled={!replyText.trim() || submitting}
+                  <button
+                    className="btn-icon"
+                    disabled={!replyText.trim() || submitting}
                     onClick={() => submitComment(comment.id)}
-                    style={{ background: replyText.trim() ? 'var(--brand)' : undefined, color: replyText.trim() ? 'white' : undefined }}>
-                    {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    style={{
+                      background: replyText.trim() ? 'var(--brand)' : undefined,
+                      color: replyText.trim() ? 'white' : undefined,
+                    }}
+                  >
+                    {submitting
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <Send className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               )}
@@ -271,12 +309,30 @@ function CommentsSection({ postId }: { postId: string }) {
       </div>
 
       <div className="flex gap-2 mt-3">
-        <input className="input text-sm py-2 flex-1" placeholder="Write a comment…"
-          value={text} onChange={e => setText(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment() } }} />
-        <button className="btn-icon" disabled={!text.trim() || submitting} onClick={() => submitComment()}
-          style={{ background: text.trim() ? 'var(--brand)' : undefined, color: text.trim() ? 'white' : undefined }}>
-          {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+        <input
+          className="input text-sm py-2 flex-1"
+          placeholder="Write a comment…"
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              submitComment()
+            }
+          }}
+        />
+        <button
+          className="btn-icon"
+          disabled={!text.trim() || submitting}
+          onClick={() => submitComment()}
+          style={{
+            background: text.trim() ? 'var(--brand)' : undefined,
+            color: text.trim() ? 'white' : undefined,
+          }}
+        >
+          {submitting
+            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            : <Send className="w-3.5 h-3.5" />}
         </button>
       </div>
     </div>
@@ -284,16 +340,22 @@ function CommentsSection({ postId }: { postId: string }) {
 }
 
 function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }) {
-  const author   = post.profiles as unknown as Profile
+  const author    = post.profiles as unknown as Profile
   const [menuOpen, setMenuOpen] = useState(false)
 
   const reactionCounts: Record<string, number> = {}
-  for (const rc of post.reaction_counts ?? []) reactionCounts[rc.type] = rc.count
+  for (const rc of post.reaction_counts ?? []) {
+    reactionCounts[rc.type] = rc.count
+  }
 
   return (
     <div className="card animate-appear" style={{ padding: '20px' }}>
       <div className="flex items-start gap-3 mb-3">
-        <AvatarUI name={author?.full_name || 'Resident'} avatarUrl={author?.avatar_url} size={42} />
+        <AvatarUI
+          name={author?.full_name || 'Resident'}
+          avatarUrl={author?.avatar_url}
+          size={42}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
@@ -307,170 +369,3 @@ function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }
           </p>
         </div>
         <div className="relative">
-          <button className="btn-icon w-8 h-8" onClick={() => setMenuOpen(v => !v)}>
-            <MoreHorizontal className="w-4 h-4" />
-          </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-9 z-20 card py-1 w-36" style={{ boxShadow: 'var(--shadow-lg)' }}>
-                <button className="w-full text-left px-3 py-2 text-sm transition-colors"
-                  style={{ color: 'var(--text-secondary)' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = '')}>
-                  Copy link
-                </button>
-                {post.author_id === currentUserId && (
-                  <button className="w-full text-left px-3 py-2 text-sm text-red-500 transition-colors"
-                    onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
-                    onMouseLeave={e => (e.currentTarget.style.background = '')}>
-                    Delete post
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      <p className="text-sm leading-relaxed whitespace-pre-wrap mb-3" style={{ color: 'var(--text-primary)' }}>
-        {post.content}
-      </p>
-
-      {post.image_url && post.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
-        <div className="mb-3 overflow-hidden rounded-xl border" style={{ borderColor: 'var(--border-soft)' }}>
-          <img src={post.image_url} alt="Post attachment" className="w-full object-cover max-h-80" />
-        </div>
-      )}
-      {post.image_url && !post.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
-        <a href={post.image_url} target="_blank" rel="noopener noreferrer"
-          className="mb-3 flex items-center gap-2 p-3 rounded-xl text-sm font-medium transition-colors"
-          style={{ background: 'var(--brand-xlight)', color: 'var(--brand)' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--brand-light)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'var(--brand-xlight)')}>
-          <Paperclip className="w-4 h-4" /> View attachment
-        </a>
-      )}
-
-      <ReactionBar postId={post.id} initialCounts={reactionCounts} initialUserReaction={post.user_reaction ?? null} />
-    </div>
-  )
-}
-
-function ComposeModal({ currentProfile, currentUserId, onPost, onClose }: {
-  currentProfile: Profile | null
-  currentUserId: string
-  onPost: (post: Post) => void
-  onClose: () => void
-}) {
-  const [content, setContent]           = useState('')
-  const [phaseTag, setPhaseTag]         = useState('All Phases')
-  const [posting, setPosting]           = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [fileError, setFileError]       = useState('')
-  const photoInputRef = useRef<HTMLInputElement>(null)
-  const fileInputRef  = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 2 * 1024 * 1024) { setFileError('File too large. Max 2MB.'); return }
-    setFileError('')
-    setSelectedFile(file)
-  }
-
-  const handlePost = async () => {
-    if (!content.trim() || posting) return
-    setPosting(true)
-    let image_url = null
-    if (selectedFile) {
-      const ext  = selectedFile.name.split('.').pop()
-      const path = `posts/${currentUserId}/${Date.now()}.${ext}`
-      const { data: up, error: upErr } = await supabase.storage
-        .from('shai-uploads').upload(path, selectedFile, { upsert: true })
-      if (!upErr && up) {
-        const { data: urlData } = supabase.storage.from('shai-uploads').getPublicUrl(path)
-        image_url = urlData.publicUrl
-      }
-    }
-    const { data, error } = await supabase.from('posts')
-      .insert({ content: content.trim(), phase_tag: phaseTag, author_id: currentUserId, image_url })
-      .select('*, profiles(id, full_name, unit, phase, role, avatar_url)')
-      .single()
-    if (!error && data) { onPost(data); onClose() }
-    setPosting(false)
-  }
-
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-panel" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border-soft)' }}>
-          <h2 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>Create Post</h2>
-          <button onClick={onClose} className="btn-icon w-7 h-7"><X className="w-4 h-4" /></button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-5">
-          <div className="flex gap-3 mb-4">
-            <AvatarUI name={currentProfile?.full_name || 'Me'} avatarUrl={currentProfile?.avatar_url} size={42} />
-            <div>
-              <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{currentProfile?.full_name}</p>
-              <select className="input py-1 text-xs mt-1 w-auto"
-                value={phaseTag} onChange={e => setPhaseTag(e.target.value)}>
-                {PHASES.map(p => <option key={p}>{p}</option>)}
-              </select>
-            </div>
-          </div>
-          <textarea
-            className="w-full resize-none text-sm leading-relaxed outline-none bg-transparent"
-            style={{ color: 'var(--text-primary)', minHeight: 120 }}
-            placeholder={`What's on your mind, ${currentProfile?.full_name?.split(' ')[0] || 'neighbor'}?`}
-            value={content}
-            onChange={e => setContent(e.target.value)}
-            autoFocus
-          />
-          {selectedFile && (
-            <div className="mt-2 flex items-center gap-2 text-xs p-2 rounded-lg"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
-              <Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="truncate">{selectedFile.name}</span>
-              <button onClick={() => setSelectedFile(null)} className="ml-auto btn-icon w-5 h-5 flex-shrink-0">
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          )}
-          {fileError && <p className="text-xs text-red-500 mt-1">{fileError}</p>}
-          <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-          <input ref={fileInputRef}  type="file" accept=".pdf,.doc,.docx,.txt" className="hidden" onChange={handleFileSelect} />
-        </div>
-        <div className="px-5 py-4 flex items-center justify-between" style={{ borderTop: '1px solid var(--border-soft)' }}>
-          <div className="flex gap-1">
-            <button type="button"
-              onClick={() => { if (photoInputRef.current) { photoInputRef.current.value = ''; photoInputRef.current.click() } }}
-              className="btn-ghost py-2 px-3 text-xs gap-1.5">
-              <ImagePlus className="w-4 h-4" /> Photo
-            </button>
-            <button type="button"
-              onClick={() => { if (fileInputRef.current) { fileInputRef.current.value = ''; fileInputRef.current.click() } }}
-              className="btn-ghost py-2 px-3 text-xs gap-1.5">
-              <FileText className="w-4 h-4" /> File
-            </button>
-          </div>
-          <button onClick={handlePost} disabled={posting || !content.trim()} className="btn-primary gap-2">
-            {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null} Post
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default function FeedClient({ posts: initial, currentProfile, currentUserId }: {
-  posts: Post[]
-  currentProfile: Profile | null
-  currentUserId: string
-}) {
-  const [posts, setPosts]             = useState(initial)
-  const [showCompose, setShowCompose] = useState(false)
-
-  return (
-    <div class
