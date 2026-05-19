@@ -413,7 +413,7 @@ function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }
       )}
 
       {post.image_url && !post.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
-        
+  
           href={post.image_url}
           target="_blank"
           rel="noopener noreferrer"
