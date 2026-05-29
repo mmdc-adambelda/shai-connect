@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/components/ui/ThemeProvider'
 export const metadata: Metadata = {
   title: 'SHAI Connect',
   description: 'Community Digital Platform for Sabella Homeowners Association Inc.',
-  icons: { icon: '/favicon.ico' },
+  icons: { icon: '/logo.png', apple: '/logo.png' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

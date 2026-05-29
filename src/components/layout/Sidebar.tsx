@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   Newspaper, Megaphone, MessageSquare, Mail,
-  Users, User, ShieldCheck, Leaf, Video, X,
+  Users, User, ShieldCheck, Video, X,
   Rss, FileText, BarChart3,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -53,12 +54,13 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       {/* Logo row */}
       <div className="px-3 mb-6 flex items-center justify-between">
         <Link href="/feed" className="flex items-center gap-2.5 group" onClick={onClose}>
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
-            style={{ background: 'var(--brand)' }}
-          >
-            <Leaf className="w-5 h-5 text-white" />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="SHAI Connect"
+            width={36}
+            height={36}
+            className="rounded-xl flex-shrink-0 transition-transform group-hover:scale-105"
+          />
           <div>
             <p className="font-display text-base font-bold leading-tight" style={{ color: 'var(--brand)' }}>
               SHAI Connect
