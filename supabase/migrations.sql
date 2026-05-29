@@ -105,3 +105,129 @@ CREATE OR REPLACE VIEW post_comment_counts AS
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('shai-uploads', 'shai-uploads', true)
 -- ON CONFLICT DO NOTHING;
 
+
+
+-- ============================================================
+-- SHAI Connect – New Tables Migration
+-- Board Resolutions & Financial Reports
+-- Run this in your Supabase SQL Editor
+-- ============================================================
+
+-- ── BOARD RESOLUTIONS ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.board_resolutions (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  resolution_number TEXT NOT NULL,
+  title             TEXT NOT NULL,
+  description       TEXT,
+  pdf_url           TEXT,
+  approval_date     DATE NOT NULL,
+  uploaded_by       UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  published         BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+ALTER TABLE public.board_resolutions ENABLE ROW LEVEL SECURITY;
+
+-- All authenticated users can view published resolutions
+CREATE POLICY "Published resolutions viewable by authenticated users"
+  ON public.board_resolutions FOR SELECT
+  USING (auth.role() = 'authenticated' AND published = TRUE);
+
+-- Admins and superadmins can view all (including unpublished)
+CREATE POLICY "Admins can view all resolutions"
+  ON public.board_resolutions FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role IN ('admin','superadmin')
+    )
+  );
+
+-- Admin and superadmin can insert
+CREATE POLICY "Admin can insert resolutions"
+  ON public.board_resolutions FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role IN ('admin','superadmin')
+    )
+  );
+
+-- Admin and superadmin can update
+CREATE POLICY "Admin can update resolutions"
+  ON public.board_resolutions FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role IN ('admin','superadmin')
+    )
+  );
+
+-- Only superadmin can delete
+CREATE POLICY "Superadmin can delete resolutions"
+  ON public.board_resolutions FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'superadmin'
+    )
+  );
+
+CREATE INDEX IF NOT EXISTS idx_board_resolutions_published   ON public.board_resolutions(published);
+CREATE INDEX IF NOT EXISTS idx_board_resolutions_approval    ON public.board_resolutions(approval_date DESC);
+CREATE INDEX IF NOT EXISTS idx_board_resolutions_uploaded_by ON public.board_resolutions(uploaded_by);
+
+
+-- ── FINANCIAL REPORTS ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.financial_reports (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title       TEXT NOT NULL,
+  year        INT NOT NULL,
+  report_type TEXT NOT NULL DEFAULT 'Annual Financial Report',
+  pdf_url     TEXT,
+  uploaded_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  published   BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+ALTER TABLE public.financial_reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Published reports viewable by authenticated users"
+  ON public.financial_reports FOR SELECT
+  USING (auth.role() = 'authenticated' AND published = TRUE);
+
+CREATE POLICY "Admins can manage financial reports"
+  ON public.financial_reports FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role IN ('admin','superadmin')
+    )
+  );
+
+CREATE INDEX IF NOT EXISTS idx_financial_reports_year      ON public.financial_reports(year DESC);
+CREATE INDEX IF NOT EXISTS idx_financial_reports_published ON public.financial_reports(published);
+
+
+-- ── Seed: 2025 Audited Financial Statements ─────────────────
+-- Update pdf_url once you've uploaded the file to Supabase Storage
+INSERT INTO public.financial_reports (title, year, report_type, pdf_url, published)
+VALUES (
+  '2025 Audited Financial Statements',
+  2025,
+  'Annual Financial Report',
+  NULL,  -- update to Supabase Storage public URL after upload
+  TRUE
+)
+ON CONFLICT DO NOTHING;
+
+-- ── Ensure 'superadmin' is a valid role value ────────────────
+-- (The existing CHECK constraint may only allow 'resident','moderator','admin')
+-- Run this if the constraint needs updating:
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_role_check;
+
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_role_check
+  CHECK (role IN ('resident','moderator','admin','superadmin'));

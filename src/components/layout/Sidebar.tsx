@@ -5,17 +5,21 @@ import { usePathname } from 'next/navigation'
 import {
   Newspaper, Megaphone, MessageSquare, Mail,
   Users, User, ShieldCheck, Leaf, Video, X,
+  Rss, FileText, BarChart3,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useEffect } from 'react'
 
 const navItems = [
-  { label: 'Feed',              href: '/feed',             icon: Newspaper,      badge: null },
-  { label: 'Announcements',    href: '/announcements',    icon: Megaphone,      badge: null },
-  { label: 'Phase Chats',      href: '/chat',             icon: MessageSquare,  badge: 3    },
-  { label: 'Messages',         href: '/messages',         icon: Mail,           badge: null },
-  { label: 'Residents',        href: '/residents',        icon: Users,          badge: null },
-  { label: 'General Assembly', href: '/general-assembly', icon: Video,          badge: null },
+  { label: 'Feed',              href: '/feed',              icon: Newspaper,     badge: null },
+  { label: 'Announcements',    href: '/announcements',     icon: Megaphone,     badge: null },
+  { label: 'Community Updates',href: '/community-updates', icon: Rss,           badge: null },
+  { label: 'Board Resolutions',href: '/board-resolutions', icon: FileText,      badge: null },
+  { label: 'Financial Reports',href: '/financial-reports', icon: BarChart3,     badge: null },
+  { label: 'Phase Chats',      href: '/chat',              icon: MessageSquare, badge: 3    },
+  { label: 'Messages',         href: '/messages',          icon: Mail,          badge: null },
+  { label: 'Residents',        href: '/residents',         icon: Users,         badge: null },
+  { label: 'General Assembly', href: '/general-assembly',  icon: Video,         badge: null },
 ]
 const accountItems = [
   { label: 'My Profile',  href: '/profile', icon: User        },
@@ -30,10 +34,8 @@ interface SidebarProps {
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname()
 
-  // Close drawer on route change
   useEffect(() => { onClose() }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Lock body scroll when drawer open
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
@@ -66,7 +68,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             </p>
           </div>
         </Link>
-        {/* Close button visible only inside mobile drawer */}
         <button
           onClick={onClose}
           className="md:hidden btn-icon w-8 h-8 flex-shrink-0"
@@ -83,7 +84,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         </p>
         {navItems.map(({ label, href, icon: Icon, badge }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
-          const isAssembly = href === '/general-assembly'
           return (
             <Link key={href} href={href} className={clsx('nav-link', active && 'active')}>
               <Icon className="w-4 h-4 flex-shrink-0" />
@@ -91,11 +91,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               {badge !== null && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: 'var(--brand)' }}>
                   {badge}
-                </span>
-              )}
-              {isAssembly && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white animate-pulse" style={{ background: '#ef4444' }}>
-                  LIVE
                 </span>
               )}
             </Link>
@@ -132,7 +127,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       </div>
 
       {/* ── Mobile: slide-over drawer ── */}
-      {/* Backdrop */}
       <div
         className={clsx(
           'fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-200 md:hidden',
@@ -141,7 +135,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         onClick={onClose}
         aria-hidden="true"
       />
-      {/* Panel */}
       <div
         className={clsx(
           'fixed inset-y-0 left-0 z-50 flex flex-col w-64 transition-transform duration-250 ease-in-out md:hidden',

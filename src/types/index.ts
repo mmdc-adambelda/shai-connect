@@ -1,5 +1,30 @@
 export type Role = 'resident' | 'moderator' | 'admin' | 'superadmin'
 
+export interface BoardResolution {
+  id: string
+  resolution_number: string
+  title: string
+  description: string | null
+  pdf_url: string | null
+  approval_date: string
+  uploaded_by: string | null
+  created_at: string
+  updated_at: string
+  published: boolean
+  profiles?: { full_name: string }
+}
+
+export interface FinancialReport {
+  id: string
+  title: string
+  year: number
+  report_type: string
+  pdf_url: string | null
+  uploaded_by: string | null
+  created_at: string
+  published: boolean
+}
+
 export interface Profile {
   id: string
   full_name: string
