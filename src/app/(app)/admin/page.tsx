@@ -35,10 +35,16 @@ export default async function AdminPage() {
     .from('chat_messages')
     .select('*', { count: 'exact', head: true })
 
+  const { data: tickets } = await supabase
+    .from('support_tickets')
+    .select('*, profiles(full_name, unit)')
+    .order('created_at', { ascending: false })
+
   return (
     <AdminClient
       users={allUsers || []}
       currentProfile={profile}
+      tickets={tickets || []}
       stats={{
         totalUsers: allUsers?.length || 0,
         totalPosts: postCount || 0,

@@ -88,6 +88,17 @@ export interface Follow {
   created_at: string
 }
 
+export interface SupportTicket {
+  id: string
+  user_id: string
+  type: 'bug' | 'feature' | 'feedback'
+  subject: string
+  description: string
+  status: 'open' | 'resolved'
+  created_at: string
+  profiles?: { full_name: string; unit: string }
+}
+
 export interface ChatMessage {
   id: string
   room_id: string

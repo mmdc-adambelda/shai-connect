@@ -6,8 +6,9 @@ import {
   Users, FileText, Megaphone, MessageSquare, ShieldAlert,
   CheckCircle, XCircle, Edit2, Save, X, Search,
   ShieldCheck, ShieldOff, KeyRound, Hash,
+  LifeBuoy, Bug, Lightbulb, MessageCircle, RotateCcw,
 } from 'lucide-react'
-import type { Profile } from '@/types'
+import type { Profile, SupportTicket } from '@/types'
 import clsx from 'clsx'
 
 const PHASES = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
@@ -184,23 +185,36 @@ function EditUserModal({
 }
 
 // ── Main AdminClient ──────────────────────────────────────────────
+const TICKET_TYPE_META = {
+  bug:      { label: 'Bug Report',      icon: Bug,           bg: '#fee2e2', color: '#991b1b' },
+  feature:  { label: 'Feature Request', icon: Lightbulb,     bg: '#eff6ff', color: '#1d4ed8' },
+  feedback: { label: 'Feedback',        icon: MessageCircle, bg: 'var(--brand-xlight)', color: 'var(--brand)' },
+}
+
 export default function AdminClient({
   users: initialUsers,
   currentProfile,
+  tickets: initialTickets,
   stats,
 }: {
   users: Profile[]
   currentProfile: Profile
+  tickets: SupportTicket[]
   stats: { totalUsers: number; totalPosts: number; totalAnnouncements: number; totalMessages: number }
 }) {
   const supabase = createClient()
-  const [tab, setTab] = useState<'overview' | 'residents' | 'flags'>('overview')
+  const [tab, setTab] = useState<'overview' | 'residents' | 'flags' | 'tickets'>('overview')
   const [users, setUsers] = useState<Profile[]>(initialUsers)
   const [userSearch, setUserSearch] = useState('')
   const [verifyFilter, setVerifyFilter] = useState<'all' | 'pending' | 'verified'>('all')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [editingUser, setEditingUser] = useState<Profile | null>(null)
   const [resolvedFlags, setResolvedFlags] = useState<Set<string>>(new Set())
+  const [tickets, setTickets] = useState<SupportTicket[]>(initialTickets)
+  const [ticketTypeFilter, setTicketTypeFilter] = useState<'all' | 'bug' | 'feature' | 'feedback'>('all')
+  const [ticketStatusFilter, setTicketStatusFilter] = useState<'all' | 'open' | 'resolved'>('open')
+  const [ticketActionLoading, setTicketActionLoading] = useState<string | null>(null)
+  const [expandedTicket, setExpandedTicket] = useState<string | null>(null)
 
   // ── Verify / Unverify ──────────────────────────────────────────
   const handleVerify = async (userId: string, verify: boolean) => {
@@ -213,6 +227,14 @@ export default function AdminClient({
   // ── After edit saved ───────────────────────────────────────────
   const handleUserSaved = (updated: Profile) => {
     setUsers(prev => prev.map(u => u.id === updated.id ? updated : u))
+  }
+
+  // ── Ticket status toggle ───────────────────────────────────────
+  const handleTicketStatus = async (ticketId: string, status: 'open' | 'resolved') => {
+    setTicketActionLoading(ticketId)
+    await supabase.from('support_tickets').update({ status }).eq('id', ticketId)
+    setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status } : t))
+    setTicketActionLoading(null)
   }
 
   // ── Filtering ──────────────────────────────────────────────────
@@ -229,6 +251,12 @@ export default function AdminClient({
   })
 
   const pendingCount = users.filter(u => !u.is_verified).length
+  const openTicketCount = tickets.filter(t => t.status === 'open').length
+  const filteredTickets = tickets.filter(t => {
+    const matchType   = ticketTypeFilter === 'all' || t.type === ticketTypeFilter
+    const matchStatus = ticketStatusFilter === 'all' || t.status === ticketStatusFilter
+    return matchType && matchStatus
+  })
 
   const statCards = [
     { label: 'Total Residents',  value: stats.totalUsers,         icon: Users,        color: '#1b6b45' },
@@ -259,6 +287,7 @@ export default function AdminClient({
           { key: 'overview',   label: 'Overview' },
           { key: 'residents',  label: 'Residents' },
           { key: 'flags',      label: 'Flagged' },
+          { key: 'tickets',    label: 'Tickets' },
         ] as const).map(({ key, label }) => (
           <button
             key={key}
@@ -279,6 +308,11 @@ export default function AdminClient({
             {key === 'residents' && pendingCount > 0 && (
               <span className="text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#d97706' }}>
                 {pendingCount}
+              </span>
+            )}
+            {key === 'tickets' && openTicketCount > 0 && (
+              <span className="text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#2563eb' }}>
+                {openTicketCount}
               </span>
             )}
           </button>
@@ -545,6 +579,166 @@ export default function AdminClient({
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* ── TICKETS ── */}
+      {tab === 'tickets' && (
+        <div className="flex flex-col gap-4">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Status filter */}
+            <div className="flex gap-1.5">
+              {([
+                { key: 'open',     label: 'Open' },
+                { key: 'resolved', label: 'Resolved' },
+                { key: 'all',      label: 'All' },
+              ] as const).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setTicketStatusFilter(key)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    background: ticketStatusFilter === key ? 'var(--brand)' : 'var(--surface-2)',
+                    color:      ticketStatusFilter === key ? 'white' : 'var(--text-muted)',
+                  }}
+                >
+                  {label}
+                  {key === 'open' && openTicketCount > 0 && ` (${openTicketCount})`}
+                </button>
+              ))}
+            </div>
+
+            {/* Type filter */}
+            <div className="flex gap-1.5 flex-wrap">
+              {([
+                { key: 'all',      label: 'All Types' },
+                { key: 'bug',      label: 'Bug' },
+                { key: 'feature',  label: 'Feature' },
+                { key: 'feedback', label: 'Feedback' },
+              ] as const).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setTicketTypeFilter(key)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    background: ticketTypeFilter === key ? 'var(--surface)' : 'var(--surface-2)',
+                    color:      ticketTypeFilter === key ? 'var(--text-primary)' : 'var(--text-muted)',
+                    border:     ticketTypeFilter === key ? '1px solid var(--border-soft)' : '1px solid transparent',
+                    boxShadow:  ticketTypeFilter === key ? 'var(--shadow-xs)' : 'none',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <span className="text-xs self-center ml-auto" style={{ color: 'var(--text-muted)' }}>
+              {filteredTickets.length} ticket{filteredTickets.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          {/* Ticket list */}
+          {filteredTickets.length === 0 ? (
+            <div className="card p-12 flex flex-col items-center gap-3 text-center">
+              <LifeBuoy className="w-10 h-10" style={{ color: 'var(--text-muted)' }} />
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>No tickets found</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Adjust the filters or check back later.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {filteredTickets.map(ticket => {
+                const meta = TICKET_TYPE_META[ticket.type]
+                const TypeIcon = meta.icon
+                const isOpen = ticket.status === 'open'
+                const isExpanded = expandedTicket === ticket.id
+                const submitter = ticket.profiles as unknown as { full_name: string; unit: string } | undefined
+
+                return (
+                  <div
+                    key={ticket.id}
+                    className="card p-4 flex flex-col gap-3 transition-all"
+                    style={{ opacity: isOpen ? 1 : 0.75 }}
+                  >
+                    {/* Top row */}
+                    <div className="flex items-start gap-3">
+                      {/* Type icon */}
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                        style={{ background: meta.bg }}
+                      >
+                        <TypeIcon className="w-4 h-4" style={{ color: meta.color }} />
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                          <span
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                            style={{ background: meta.bg, color: meta.color }}
+                          >
+                            {meta.label}
+                          </span>
+                          <span
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                            style={{
+                              background: isOpen ? '#fef6e4' : '#dcfce7',
+                              color: isOpen ? '#b45309' : '#166534',
+                            }}
+                          >
+                            {isOpen ? 'Open' : 'Resolved'}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
+                          {ticket.subject}
+                        </p>
+                        <p
+                          className={clsx('text-xs mt-1 leading-relaxed', !isExpanded && 'line-clamp-2')}
+                          style={{ color: 'var(--text-muted)' }}
+                        >
+                          {ticket.description}
+                        </p>
+                        {ticket.description.length > 120 && (
+                          <button
+                            onClick={() => setExpandedTicket(isExpanded ? null : ticket.id)}
+                            className="text-xs mt-0.5 font-medium"
+                            style={{ color: 'var(--brand)' }}
+                          >
+                            {isExpanded ? 'Show less' : 'Read more'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Footer row */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
+                      <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>
+                          {submitter?.full_name || 'Unknown'}
+                        </span>
+                        {submitter?.unit && <span> · {submitter.unit}</span>}
+                        <span> · {new Date(ticket.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      </div>
+                      <button
+                        onClick={() => handleTicketStatus(ticket.id, isOpen ? 'resolved' : 'open')}
+                        disabled={ticketActionLoading === ticket.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                        style={isOpen
+                          ? { background: '#dcfce7', color: '#166534', border: '1px solid #86efac' }
+                          : { background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border-soft)' }
+                        }
+                      >
+                        {isOpen
+                          ? <><CheckCircle className="w-3.5 h-3.5" /> {ticketActionLoading === ticket.id ? '…' : 'Mark Resolved'}</>
+                          : <><RotateCcw className="w-3.5 h-3.5" /> {ticketActionLoading === ticket.id ? '…' : 'Reopen'}</>
+                        }
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
