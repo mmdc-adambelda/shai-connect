@@ -1,10 +1,7 @@
-'use client'
-
-import { useState } from 'react'
 import {
   BarChart3, TrendingUp, DollarSign, Wallet,
   Users, ArrowUpRight, ArrowDownRight, Download,
-  FileText, Calendar, CheckCircle2, Maximize2, Minimize2, ExternalLink,
+  FileText, Calendar, CheckCircle2, ExternalLink,
 } from 'lucide-react'
 
 /* ─── Financial summary data ─────────────────────────── */
@@ -63,10 +60,6 @@ const EXPENSE_BREAKDOWN = [
 
 /* ─── Main page ──────────────────────────────────────── */
 export default function FinancialReportsPage() {
-  const [expanded, setExpanded] = useState(false)
-
-  // The PDF is served from Supabase storage or a public URL.
-  // For now we reference the uploaded file path as a placeholder.
   const PDF_URL = '/SHAI-2025-Audited-FS.pdf'
 
   return (
@@ -211,65 +204,8 @@ export default function FinancialReportsPage() {
               <ExternalLink className="w-3.5 h-3.5" />
               Open
             </a>
-            <button
-              className="btn-icon w-8 h-8"
-              onClick={() => setExpanded(e => !e)}
-              title={expanded ? 'Collapse viewer' : 'Expand viewer'}
-            >
-              {expanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            </button>
           </div>
         </div>
-      </div>
-
-      {/* ── PDF Viewer ── */}
-      <div
-        className="card overflow-hidden"
-        style={{
-          height: expanded ? 'calc(100vh - 140px)' : '620px',
-          transition: 'height 0.3s ease',
-        }}
-      >
-        {/* Toolbar */}
-        <div
-          className="flex items-center justify-between px-4 py-2.5"
-          style={{ borderBottom: '1px solid var(--border-soft)', background: 'var(--surface)' }}
-        >
-          <div className="flex items-center gap-2">
-            <FileText className="w-3.5 h-3.5" style={{ color: 'var(--brand)' }} />
-            <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
-              SHAI 2025 Audited Financial Statements
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <a
-              href={PDF_URL}
-              download="SHAI-2025-Audited-FS.pdf"
-              className="btn-icon w-7 h-7"
-              title="Download"
-            >
-              <Download className="w-3 h-3" />
-            </a>
-            <button
-              className="btn-icon w-7 h-7"
-              onClick={() => setExpanded(e => !e)}
-              title={expanded ? 'Collapse' : 'Fullscreen'}
-            >
-              {expanded ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Embed */}
-        <iframe
-          src={`${PDF_URL}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`}
-          className="w-full"
-          style={{
-            height: expanded ? 'calc(100vh - 195px)' : '575px',
-            border: 'none',
-          }}
-          title="SHAI 2025 Audited Financial Statements"
-        />
       </div>
 
       {/* Footer */}
