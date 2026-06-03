@@ -6,7 +6,7 @@ import {
   Users, FileText, Megaphone, MessageSquare, ShieldAlert,
   CheckCircle, XCircle, Edit2, Save, X, Search,
   ShieldCheck, ShieldOff, KeyRound, Hash,
-  LifeBuoy, Bug, Lightbulb, MessageCircle, RotateCcw,
+  LifeBuoy, Bug, Lightbulb, MessageCircle, RotateCcw, Trash2,
 } from 'lucide-react'
 import type { Profile, SupportTicket } from '@/types'
 import clsx from 'clsx'
@@ -209,6 +209,7 @@ export default function AdminClient({
   const [verifyFilter, setVerifyFilter] = useState<'all' | 'pending' | 'verified'>('all')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [editingUser, setEditingUser] = useState<Profile | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [resolvedFlags, setResolvedFlags] = useState<Set<string>>(new Set())
   const [tickets, setTickets] = useState<SupportTicket[]>(initialTickets)
   const [ticketTypeFilter, setTicketTypeFilter] = useState<'all' | 'bug' | 'feature' | 'feedback'>('all')
@@ -221,6 +222,15 @@ export default function AdminClient({
     setActionLoading(userId)
     await supabase.from('profiles').update({ is_verified: verify }).eq('id', userId)
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_verified: verify } : u))
+    setActionLoading(null)
+  }
+
+  // ── Delete resident ────────────────────────────────────────────
+  const handleDelete = async (userId: string) => {
+    setActionLoading(userId)
+    await supabase.from('profiles').delete().eq('id', userId)
+    setUsers(prev => prev.filter(u => u.id !== userId))
+    setConfirmDeleteId(null)
     setActionLoading(null)
   }
 
@@ -521,6 +531,35 @@ export default function AdminClient({
                           >
                             <Edit2 className="w-3.5 h-3.5" /> Edit
                           </button>
+
+                          {/* Delete / confirm */}
+                          {confirmDeleteId === user.id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleDelete(user.id)}
+                                disabled={actionLoading === user.id}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                                style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}
+                              >
+                                {actionLoading === user.id ? '…' : 'Confirm'}
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                                style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border-soft)' }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDeleteId(user.id)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                              style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>You</span>
