@@ -115,43 +115,45 @@ export default function ChatClient({
             <p className="text-xs" style={{ color: 'var(--brand)' }}>● Live</p>
           </div>
 
-          {/* Room picker dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setRoomPickerOpen(v => !v)}
-              className="btn-ghost py-1.5 px-3 text-xs flex items-center gap-1.5"
-            >
-              Switch Room <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-            {roomPickerOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setRoomPickerOpen(false)} />
-                <div
-                  className="absolute right-0 top-9 z-20 card py-1 min-w-[160px]"
-                  style={{ boxShadow: 'var(--shadow-lg)' }}
-                >
-                  {rooms.map(room => (
-                    <button
-                      key={room}
-                      onClick={() => switchRoom(room)}
-                      className="w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors"
-                      style={{
-                        color: activeRoom === room ? 'var(--brand)' : 'var(--text-secondary)',
-                        background: activeRoom === room ? 'var(--brand-xlight)' : 'transparent',
-                        fontWeight: activeRoom === room ? 600 : 400,
-                      }}
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ background: activeRoom === room ? 'var(--brand)' : 'var(--gray-300, #ccc)' }}
-                      />
-                      {room}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          {/* Room picker — only shown if user has access to multiple rooms */}
+          {rooms.length > 1 && (
+            <div className="relative">
+              <button
+                onClick={() => setRoomPickerOpen(v => !v)}
+                className="btn-ghost py-1.5 px-3 text-xs flex items-center gap-1.5"
+              >
+                Switch Room <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              {roomPickerOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setRoomPickerOpen(false)} />
+                  <div
+                    className="absolute right-0 top-9 z-20 card py-1 min-w-[160px]"
+                    style={{ boxShadow: 'var(--shadow-lg)' }}
+                  >
+                    {rooms.map(room => (
+                      <button
+                        key={room}
+                        onClick={() => switchRoom(room)}
+                        className="w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors"
+                        style={{
+                          color: activeRoom === room ? 'var(--brand)' : 'var(--text-secondary)',
+                          background: activeRoom === room ? 'var(--brand-xlight)' : 'transparent',
+                          fontWeight: activeRoom === room ? 600 : 400,
+                        }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ background: activeRoom === room ? 'var(--brand)' : 'var(--gray-300, #ccc)' }}
+                        />
+                        {room}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Messages ── */}

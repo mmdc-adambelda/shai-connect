@@ -92,9 +92,11 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
           <>
             <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
             <div
-              className="absolute right-0 top-11 z-50 overflow-hidden card"
+              className="fixed right-3 z-50 overflow-hidden card"
               style={{
-                width: 'min(320px, calc(100vw - 24px))',
+                top: '3.75rem',
+                width: 'min(340px, calc(100vw - 1.5rem))',
+                maxHeight: 'calc(100vh - 5rem)',
                 boxShadow: 'var(--shadow-lg)',
                 borderRadius: 'var(--radius-lg)',
               }}
@@ -123,7 +125,7 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
                   </button>
                 </div>
               </div>
-              <div className="max-h-80 overflow-y-auto">
+              <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 10rem)' }}>
                 {notifications.map(n => (
                   <div
                     key={n.id}

@@ -24,7 +24,7 @@ export default async function ChatPage() {
 
   return (
     <ChatClient
-      rooms={ROOMS}
+      rooms={[defaultRoom]}
       initialRoom={defaultRoom}
       initialMessages={messages || []}
       currentProfile={profile}

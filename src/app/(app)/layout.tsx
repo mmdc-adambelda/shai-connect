@@ -24,7 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--surface-2)' }}>
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} profile={profile} />
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <Topbar profile={profile} onMenuClick={() => setSidebarOpen(true)} />

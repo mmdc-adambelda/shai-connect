@@ -6,10 +6,11 @@ import { usePathname } from 'next/navigation'
 import {
   Newspaper, Megaphone, MessageSquare, Mail,
   Users, User, ShieldCheck, Video, X,
-  Rss, FileText, BarChart3,
+  Rss, FileText, BarChart3, LifeBuoy,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useEffect } from 'react'
+import type { Profile } from '@/types'
 
 const navItems = [
   { label: 'Feed',              href: '/feed',              icon: Newspaper,     badge: null },
@@ -17,22 +18,21 @@ const navItems = [
   { label: 'Community Updates',href: '/community-updates', icon: Rss,           badge: null },
   { label: 'Board Resolutions',href: '/board-resolutions', icon: FileText,      badge: null },
   { label: 'Financial Reports',href: '/financial-reports', icon: BarChart3,     badge: null },
-  { label: 'Phase Chats',      href: '/chat',              icon: MessageSquare, badge: 3    },
+  { label: 'Phase Chats',      href: '/chat',              icon: MessageSquare, badge: null },
   { label: 'Messages',         href: '/messages',          icon: Mail,          badge: null },
   { label: 'Residents',        href: '/residents',         icon: Users,         badge: null },
   { label: 'General Assembly', href: '/general-assembly',  icon: Video,         badge: null },
-]
-const accountItems = [
-  { label: 'My Profile',  href: '/profile', icon: User        },
-  { label: 'Admin Panel', href: '/admin',   icon: ShieldCheck },
+  { label: 'Submit a Ticket',  href: '/tickets',           icon: LifeBuoy,      badge: null },
 ]
 
 interface SidebarProps {
   open: boolean
   onClose: () => void
+  profile: Profile | null
 }
 
-export default function Sidebar({ open, onClose }: SidebarProps) {
+export default function Sidebar({ open, onClose, profile }: SidebarProps) {
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin'
   const pathname = usePathname()
 
   useEffect(() => { onClose() }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -108,7 +108,10 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
           Account
         </p>
-        {accountItems.map(({ label, href, icon: Icon }) => {
+        {[
+          { label: 'My Profile',  href: '/profile', icon: User        },
+          ...(isAdmin ? [{ label: 'Admin Panel', href: '/admin', icon: ShieldCheck }] : []),
+        ].map(({ label, href, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link key={href} href={href} className={clsx('nav-link', active && 'active')}>
