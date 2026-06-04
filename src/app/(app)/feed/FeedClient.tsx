@@ -34,10 +34,12 @@ function ReactionBar({
   postId,
   initialCounts,
   initialUserReaction,
+  initialCommentCount,
 }: {
   postId: string
   initialCounts: Record<string, number>
   initialUserReaction: ReactionType | null
+  initialCommentCount: number
 }) {
   const { counts, userReaction, total, react, loading } = useReactions(postId, {
     counts: initialCounts,
@@ -46,6 +48,7 @@ function ReactionBar({
   })
   const [pickerOpen, setPickerOpen] = useState(false)
   const [showComments, setShowComments] = useState(false)
+  const [commentCount, setCommentCount] = useState(initialCommentCount)
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const topReactions = Object.entries(counts)
@@ -58,18 +61,32 @@ function ReactionBar({
 
   return (
     <>
-      {total > 0 && (
-        <div className="flex items-center gap-1.5 mb-2 px-1">
-          <div className="flex -space-x-0.5">
-            {topReactions.map((r) => (
-              <span key={r.type} className="text-sm leading-none">
-                {r.emoji}
-              </span>
-            ))}
-          </div>
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {total}
-          </span>
+      {(total > 0 || commentCount > 0) && (
+        <div className="flex items-center justify-between mb-2 px-1">
+          {/* Reaction summary */}
+          {total > 0 ? (
+            <div className="flex items-center gap-1.5">
+              <div className="flex -space-x-0.5">
+                {topReactions.map((r) => (
+                  <span key={r.type} className="text-sm leading-none">{r.emoji}</span>
+                ))}
+              </div>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{total}</span>
+            </div>
+          ) : <span />}
+
+          {/* Comment count — clickable to open/close */}
+          {commentCount > 0 && (
+            <button
+              onClick={() => setShowComments(v => !v)}
+              className="text-xs transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+            >
+              {commentCount} {commentCount === 1 ? 'comment' : 'comments'}
+            </button>
+          )}
         </div>
       )}
 
@@ -128,6 +145,11 @@ function ReactionBar({
         <button onClick={() => setShowComments((v) => !v)} className="reaction-btn">
           <MessageCircle className="w-4 h-4" />
           <span>Comment</span>
+          {commentCount > 0 && (
+            <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+              {commentCount}
+            </span>
+          )}
         </button>
 
         <button className="reaction-btn ml-auto">
@@ -136,12 +158,17 @@ function ReactionBar({
         </button>
       </div>
 
-      {showComments && <CommentsSection postId={postId} />}
+      {showComments && (
+        <CommentsSection
+          postId={postId}
+          onCommentAdded={() => setCommentCount(c => c + 1)}
+        />
+      )}
     </>
   )
 }
 
-function CommentsSection({ postId }: { postId: string }) {
+function CommentsSection({ postId, onCommentAdded }: { postId: string; onCommentAdded: () => void }) {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -184,6 +211,7 @@ function CommentsSection({ postId }: { postId: string }) {
         return
       }
       if (data.comment) {
+        onCommentAdded()
         if (!parentId) {
           setComments((prev) => [...prev, { ...data.comment, replies: [] }])
           setText('')
@@ -523,6 +551,7 @@ function PostCard({
         postId={post.id}
         initialCounts={reactionCounts}
         initialUserReaction={post.user_reaction ?? null}
+        initialCommentCount={post.comment_count ?? 0}
       />
     </div>
   )
