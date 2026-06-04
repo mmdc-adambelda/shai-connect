@@ -147,6 +147,7 @@ function CommentsSection({ postId }: { postId: string }) {
   const [loaded, setLoaded] = useState(false)
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({})
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
@@ -170,6 +171,7 @@ function CommentsSection({ postId }: { postId: string }) {
     const content = parentId ? replyText.trim() : text.trim()
     if (!content) return
     setSubmitting(true)
+    setSubmitError('')
     try {
       const res = await fetch(`/api/posts/${postId}/comments`, {
         method: 'POST',
@@ -177,6 +179,10 @@ function CommentsSection({ postId }: { postId: string }) {
         body: JSON.stringify({ content, parent_id: parentId ?? null }),
       })
       const data = await res.json()
+      if (!res.ok || data.error) {
+        setSubmitError(data.error ?? 'Failed to post comment. Please try again.')
+        return
+      }
       if (data.comment) {
         if (!parentId) {
           setComments((prev) => [...prev, { ...data.comment, replies: [] }])
@@ -194,6 +200,8 @@ function CommentsSection({ postId }: { postId: string }) {
           setExpandedReplies((prev) => ({ ...prev, [parentId]: true }))
         }
       }
+    } catch {
+      setSubmitError('Network error. Please check your connection.')
     } finally {
       setSubmitting(false)
     }
@@ -369,12 +377,16 @@ function CommentsSection({ postId }: { postId: string }) {
         })}
       </div>
 
+      {submitError && (
+        <p className="text-xs text-red-500 mt-2 px-1">{submitError}</p>
+      )}
+
       <div className="flex gap-2 mt-3">
         <input
           className="input text-sm py-2 flex-1"
           placeholder="Write a comment..."
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => { setText(e.target.value); setSubmitError('') }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
