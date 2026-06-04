@@ -30,7 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Topbar profile={profile} onMenuClick={() => setSidebarOpen(true)} />
         <main
           className="flex-1 overflow-y-auto p-4 md:p-6"
-          style={{ background: 'var(--surface-2)' }}
+          style={{ background: 'var(--surface-2)', overscrollBehaviorY: 'contain' }}
         >
           {children}
         </main>
