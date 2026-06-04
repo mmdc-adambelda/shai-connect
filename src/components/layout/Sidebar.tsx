@@ -4,25 +4,22 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
-  Newspaper, Megaphone, MessageSquare, Mail,
+  Newspaper, Megaphone,
   Users, User, ShieldCheck, Video, X,
-  Rss, FileText, BarChart3, LifeBuoy,
+  Rss, FileText, BarChart3,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useEffect } from 'react'
 import type { Profile } from '@/types'
 
 const navItems = [
-  { label: 'Feed',              href: '/feed',              icon: Newspaper,     badge: null },
-  { label: 'Announcements',    href: '/announcements',     icon: Megaphone,     badge: null },
-  { label: 'Community Updates',href: '/community-updates', icon: Rss,           badge: null },
-  { label: 'Board Resolutions',href: '/board-resolutions', icon: FileText,      badge: null },
-  { label: 'Financial Reports',href: '/financial-reports', icon: BarChart3,     badge: null },
-  { label: 'Phase Chats',      href: '/chat',              icon: MessageSquare, badge: null },
-  { label: 'Messages',         href: '/messages',          icon: Mail,          badge: null },
-  { label: 'Residents',        href: '/residents',         icon: Users,         badge: null },
-  { label: 'General Assembly', href: '/general-assembly',  icon: Video,         badge: null },
-  { label: 'Submit a Ticket',  href: '/tickets',           icon: LifeBuoy,      badge: null },
+  { label: 'Feed',              href: '/feed',              icon: Newspaper,  badge: null },
+  { label: 'Announcements',    href: '/announcements',     icon: Megaphone,  badge: null },
+  { label: 'Community Updates',href: '/community-updates', icon: Rss,        badge: null },
+  { label: 'Board Resolutions',href: '/board-resolutions', icon: FileText,   badge: null },
+  { label: 'Financial Reports',href: '/financial-reports', icon: BarChart3,  badge: null },
+  { label: 'Residents',        href: '/residents',         icon: Users,      badge: null },
+  { label: 'General Assembly', href: '/general-assembly',  icon: Video,      badge: null },
 ]
 
 interface SidebarProps {

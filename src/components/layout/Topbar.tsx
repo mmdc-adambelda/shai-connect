@@ -1,10 +1,11 @@
 'use client'
 
-import { Bell, Sun, Moon, LogOut, X, Megaphone, MessageSquare, ThumbsUp, Search, Menu } from 'lucide-react'
+import { Bell, Sun, Moon, LogOut, X, Megaphone, MessageSquare, ThumbsUp, Search, Menu, Mail, LifeBuoy } from 'lucide-react'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useState } from 'react'
+import Link from 'next/link'
 import AvatarUI from '@/components/ui/Avatar'
 import type { Profile } from '@/types'
 
@@ -24,6 +25,7 @@ interface TopbarProps {
 export default function Topbar({ profile, onMenuClick }: TopbarProps) {
   const { theme, toggle } = useTheme()
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = createClient()
   const [showNotifs, setShowNotifs] = useState(false)
   const [showMobileSearch, setShowMobileSearch] = useState(false)
@@ -72,6 +74,32 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
       >
         <Search className="w-4 h-4" />
       </button>
+
+      {/* Quick-nav icons: Phase Chat · Messages · Ticket */}
+      {[
+        { href: '/chat',     icon: MessageSquare, title: 'Phase Chats'     },
+        { href: '/messages', icon: Mail,          title: 'Messages'        },
+        { href: '/tickets',  icon: LifeBuoy,      title: 'Submit a Ticket' },
+      ].map(({ href, icon: Icon, title }) => {
+        const active = pathname === href || pathname.startsWith(href + '/')
+        return (
+          <Link
+            key={href}
+            href={href}
+            className="btn-icon relative"
+            title={title}
+            style={active ? { color: 'var(--brand)' } : undefined}
+          >
+            <Icon className="w-4 h-4" />
+            {active && (
+              <span
+                className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                style={{ background: 'var(--brand)' }}
+              />
+            )}
+          </Link>
+        )
+      })}
 
       {/* Theme toggle */}
       <button onClick={toggle} className="btn-icon" title="Toggle theme">
