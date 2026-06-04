@@ -49,6 +49,11 @@
     -webkit-font-smoothing: antialiased;
     line-height: 1.5;
   }
+  /* Stable app-shell height: excludes browser chrome on mobile */
+  .h-app {
+    height: 100vh;
+    height: 100svh;
+  }
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }

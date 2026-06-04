@@ -54,8 +54,13 @@ export default function Sidebar({ open, onClose, profile }: SidebarProps) {
 
   const Inner = () => (
     <aside
-      className="w-60 flex-shrink-0 flex flex-col py-5 px-3 gap-0.5 overflow-y-auto h-full"
-      style={{ background: 'var(--surface)', borderRight: '1px solid var(--border-soft)' }}
+      className="w-60 flex-shrink-0 flex flex-col px-3 gap-0.5 overflow-y-auto h-full"
+      style={{
+        background: 'var(--surface)',
+        borderRight: '1px solid var(--border-soft)',
+        paddingTop: 'max(1.25rem, env(safe-area-inset-top))',
+        paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))',
+      }}
     >
       {/* Logo row */}
       <div className="px-3 mb-6 flex items-center justify-between">

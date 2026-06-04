@@ -23,14 +23,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+    <div className="flex overflow-hidden h-app" style={{ background: 'var(--surface-2)' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} profile={profile} />
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <Topbar profile={profile} onMenuClick={() => setSidebarOpen(true)} />
         <main
           className="flex-1 overflow-y-auto p-4 md:p-6"
-          style={{ background: 'var(--surface-2)', overscrollBehaviorY: 'contain' }}
+          style={{
+            background: 'var(--surface-2)',
+            overscrollBehaviorY: 'contain',
+            paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem))',
+          }}
         >
           {children}
         </main>

@@ -113,9 +113,15 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
 
   return (
     <header
-      className="h-14 flex items-center px-4 gap-2 sticky top-0 z-40"
-      style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-xs)' }}
+      className="sticky top-0 z-40 flex-shrink-0"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border-soft)',
+        boxShadow: 'var(--shadow-xs)',
+      }}
     >
+    <div className="h-14 flex items-center px-4 gap-2">
       {/* Hamburger — mobile only */}
       <button
         onClick={onMenuClick}
@@ -195,7 +201,7 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
             <div
               className="fixed right-3 z-50 overflow-hidden card"
               style={{
-                top: '3.75rem',
+                top: 'calc(3.5rem + env(safe-area-inset-top))',
                 width: 'min(340px, calc(100vw - 1.5rem))',
                 maxHeight: 'calc(100vh - 5rem)',
                 boxShadow: 'var(--shadow-lg)',
@@ -284,6 +290,8 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
           <LogOut className="w-3.5 h-3.5" />
         </button>
       </div>
+
+    </div>{/* end h-14 inner row */}
 
       {/* Mobile search — full-width dropdown */}
       {showMobileSearch && (
