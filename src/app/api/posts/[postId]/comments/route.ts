@@ -106,7 +106,7 @@ export async function POST(req: Request, { params }: Params) {
     .insert({
       post_id: postId,
       author_id: user.id,
-      parent_id: parentId,
+      ...(parentId ? { parent_id: parentId } : {}),
       content,
     })
     .select(`
