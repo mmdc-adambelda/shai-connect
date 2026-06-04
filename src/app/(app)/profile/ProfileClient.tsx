@@ -6,8 +6,9 @@ import {
   Edit2, Save, X, CheckCircle, Lock, Eye, EyeOff,
   UserPlus, UserCheck, Users, FileText, MapPin,
   Shield, Camera, Loader2, Hash, KeyRound,
+  Wallet, AlertCircle, ImageIcon,
 } from 'lucide-react'
-import type { Profile } from '@/types'
+import type { Profile, Post } from '@/types'
 import { useFollow } from '@/hooks/useEngagement'
 import Link from 'next/link'
 
@@ -102,12 +103,13 @@ function PeopleModal({ title, userId, type, onClose }: {
 
 // ── Main ProfileClient ────────────────────────────────────────────
 export default function ProfileClient({
-  profile, email, postCount, followingCount, followerCount,
+  profile, email, postCount, userPosts, followingCount, followerCount,
   viewingUserId, isOwnProfile, isFollowing: initialIsFollowing,
 }: {
   profile: Profile | null
   email: string
   postCount: number
+  userPosts: Pick<Post, 'id' | 'content' | 'phase_tag' | 'image_url' | 'created_at'>[]
   followingCount: number
   followerCount: number
   viewingUserId: string
@@ -399,6 +401,104 @@ export default function ProfileClient({
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ── HOA Balance card — only visible to the account owner ── */}
+      {isOwnProfile && (
+        <div className="card p-5 mb-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Wallet className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+            <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Monthly HOA Due Balance</h3>
+          </div>
+          {profile?.hoa_balance != null ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <p
+                  className="text-3xl font-bold font-display"
+                  style={{ color: profile.hoa_balance > 0 ? '#dc2626' : 'var(--brand)' }}
+                >
+                  ₱{profile.hoa_balance.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Current outstanding balance
+                </p>
+              </div>
+              <div
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold"
+                style={profile.hoa_balance > 0
+                  ? { background: '#fee2e2', color: '#991b1b' }
+                  : { background: 'var(--brand-xlight)', color: 'var(--brand)' }
+                }
+              >
+                {profile.hoa_balance > 0
+                  ? <><AlertCircle className="w-3.5 h-3.5" /> Balance Due</>
+                  : <><CheckCircle className="w-3.5 h-3.5" /> Fully Paid</>
+                }
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              No balance information yet. Check back after the next monthly update.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Posts Timeline ── */}
+      <div className="mb-4">
+        <h3 className="font-semibold text-sm mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <FileText className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+          {isOwnProfile ? 'My Posts' : `Posts by ${profile?.full_name?.split(' ')[0]}`}
+          <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>({postCount})</span>
+        </h3>
+        {userPosts.length === 0 ? (
+          <div className="card p-8 flex flex-col items-center gap-2 text-center">
+            <FileText className="w-8 h-8" style={{ color: 'var(--text-muted)' }} />
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {isOwnProfile ? 'You haven\'t posted anything yet.' : 'No posts yet.'}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {userPosts.map(post => (
+              <div key={post.id} className="card p-4">
+                {post.image_url && (
+                  <div className="mb-3 rounded-xl overflow-hidden" style={{ maxHeight: 240 }}>
+                    <img
+                      src={post.image_url}
+                      alt="Post image"
+                      className="w-full object-cover"
+                      style={{ maxHeight: 240 }}
+                    />
+                  </div>
+                )}
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>
+                  {post.content}
+                </p>
+                <div className="flex items-center gap-3 mt-3 text-xs" style={{ color: 'var(--text-muted)' }}>
+                  <span>{new Date(post.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  {post.phase_tag && (
+                    <>
+                      <span>·</span>
+                      <span
+                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                        style={{ background: 'var(--brand-xlight)', color: 'var(--brand)' }}
+                      >
+                        {post.phase_tag}
+                      </span>
+                    </>
+                  )}
+                  {post.image_url && (
+                    <>
+                      <span>·</span>
+                      <span className="flex items-center gap-1"><ImageIcon className="w-3 h-3" /> Photo</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Account details card */}

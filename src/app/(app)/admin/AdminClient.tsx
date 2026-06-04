@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   Users, FileText, Megaphone, MessageSquare, ShieldAlert,
   CheckCircle, XCircle, Edit2, Save, X, Search,
   ShieldCheck, ShieldOff, KeyRound, Hash,
   LifeBuoy, Bug, Lightbulb, MessageCircle, RotateCcw, Trash2,
+  Upload, Wallet, RefreshCw,
 } from 'lucide-react'
 import type { Profile, SupportTicket } from '@/types'
 import clsx from 'clsx'
@@ -185,6 +186,17 @@ function EditUserModal({
 }
 
 // ── Main AdminClient ──────────────────────────────────────────────
+// ── CSV parser (handles quoted fields) ────────────────────────────
+function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[] } {
+  const lines = text.trim().split(/\r?\n/)
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''))
+  const rows = lines.slice(1).filter(l => l.trim()).map(line => {
+    const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''))
+    return Object.fromEntries(headers.map((h, i) => [h, values[i] ?? '']))
+  })
+  return { headers, rows }
+}
+
 const TICKET_TYPE_META = {
   bug:      { label: 'Bug Report',      icon: Bug,           bg: '#fee2e2', color: '#991b1b' },
   feature:  { label: 'Feature Request', icon: Lightbulb,     bg: '#eff6ff', color: '#1d4ed8' },
@@ -203,7 +215,7 @@ export default function AdminClient({
   stats: { totalUsers: number; totalPosts: number; totalAnnouncements: number; totalMessages: number }
 }) {
   const supabase = createClient()
-  const [tab, setTab] = useState<'overview' | 'residents' | 'flags' | 'tickets'>('overview')
+  const [tab, setTab] = useState<'overview' | 'residents' | 'flags' | 'tickets' | 'dues'>('overview')
   const [users, setUsers] = useState<Profile[]>(initialUsers)
   const [userSearch, setUserSearch] = useState('')
   const [verifyFilter, setVerifyFilter] = useState<'all' | 'pending' | 'verified'>('all')
@@ -216,6 +228,16 @@ export default function AdminClient({
   const [ticketStatusFilter, setTicketStatusFilter] = useState<'all' | 'open' | 'resolved'>('open')
   const [ticketActionLoading, setTicketActionLoading] = useState<string | null>(null)
   const [expandedTicket, setExpandedTicket] = useState<string | null>(null)
+
+  // Dues CSV upload state
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([])
+  const [csvRows, setCsvRows] = useState<Record<string, string>[]>([])
+  const [codeCol, setCodeCol] = useState('')
+  const [balanceCol, setBalanceCol] = useState('')
+  const [csvUploading, setCsvUploading] = useState(false)
+  const [csvResult, setCsvResult] = useState<{ updated: number; notFound: number } | null>(null)
+  const [csvError, setCsvError] = useState('')
+  const csvInputRef = useRef<HTMLInputElement>(null)
 
   // ── Verify / Unverify ──────────────────────────────────────────
   const handleVerify = async (userId: string, verify: boolean) => {
@@ -245,6 +267,48 @@ export default function AdminClient({
     await supabase.from('support_tickets').update({ status }).eq('id', ticketId)
     setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status } : t))
     setTicketActionLoading(null)
+  }
+
+  // ── CSV parse on file select ───────────────────────────────────
+  const handleCSVFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCsvError(''); setCsvResult(null)
+    const reader = new FileReader()
+    reader.onload = ev => {
+      try {
+        const { headers, rows } = parseCSV(ev.target?.result as string)
+        setCsvHeaders(headers)
+        setCsvRows(rows)
+        setCodeCol(headers.find(h => /project|code|shpy/i.test(h)) ?? headers[0] ?? '')
+        setBalanceCol(headers.find(h => /balance|due|amount/i.test(h)) ?? headers[1] ?? '')
+      } catch {
+        setCsvError('Could not parse CSV. Make sure it is a valid comma-separated file.')
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
+  // ── Apply CSV to all matched profiles ──────────────────────────
+  const handleApplyDues = async () => {
+    if (!codeCol || !balanceCol || csvRows.length === 0) return
+    setCsvUploading(true); setCsvError(''); setCsvResult(null)
+    let updated = 0; let notFound = 0
+    for (const row of csvRows) {
+      const code = row[codeCol]?.trim()
+      const raw  = row[balanceCol]?.replace(/[^0-9.-]/g, '')
+      const amount = parseFloat(raw)
+      if (!code || isNaN(amount)) { notFound++; continue }
+      const { error } = await supabase
+        .from('profiles')
+        .update({ hoa_balance: amount })
+        .eq('project_code', code)
+      error ? notFound++ : updated++
+    }
+    setCsvUploading(false)
+    setCsvResult({ updated, notFound })
+    setCsvHeaders([]); setCsvRows([])
   }
 
   // ── Filtering ──────────────────────────────────────────────────
@@ -298,6 +362,7 @@ export default function AdminClient({
           { key: 'residents',  label: 'Residents' },
           { key: 'flags',      label: 'Flagged' },
           { key: 'tickets',    label: 'Tickets' },
+          { key: 'dues',       label: 'Dues' },
         ] as const).map(({ key, label }) => (
           <button
             key={key}
@@ -776,6 +841,156 @@ export default function AdminClient({
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── DUES ── */}
+      {tab === 'dues' && (
+        <div className="max-w-2xl flex flex-col gap-5">
+
+          {/* Header */}
+          <div className="card p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--brand-xlight)' }}>
+                <Wallet className="w-5 h-5" style={{ color: 'var(--brand)' }} />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Upload Monthly Due Balances</h3>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  Upload a CSV exported from your ledger app. Map the <strong>Project Code</strong> and <strong>Balance</strong> columns — the system will update all matched residents automatically.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Upload zone */}
+          {csvHeaders.length === 0 && !csvResult && (
+            <div
+              className="card p-8 flex flex-col items-center gap-3 text-center cursor-pointer transition-colors"
+              style={{ border: '2px dashed var(--border-soft)' }}
+              onClick={() => csvInputRef.current?.click()}
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => {
+                e.preventDefault()
+                const file = e.dataTransfer.files[0]
+                if (file) {
+                  const fakeEvent = { target: { files: [file], value: '' } } as unknown as React.ChangeEvent<HTMLInputElement>
+                  handleCSVFile(fakeEvent)
+                }
+              }}
+            >
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'var(--surface-2)' }}>
+                <Upload className="w-5 h-5" style={{ color: 'var(--brand)' }} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Click or drag &amp; drop your CSV</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Must have a header row. Comma-separated (.csv)</p>
+              </div>
+              <input ref={csvInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCSVFile} />
+            </div>
+          )}
+
+          {csvError && (
+            <div className="p-3 rounded-xl text-sm" style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}>
+              {csvError}
+            </div>
+          )}
+
+          {/* Column mapping + preview */}
+          {csvHeaders.length > 0 && (
+            <div className="card p-5 flex flex-col gap-5">
+              <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                Map Columns &nbsp;<span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>({csvRows.length} rows detected)</span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                    Project Code column
+                  </label>
+                  <select className="input w-full" value={codeCol} onChange={e => setCodeCol(e.target.value)}>
+                    {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                    Balance / Amount column
+                  </label>
+                  <select className="input w-full" value={balanceCol} onChange={e => setBalanceCol(e.target.value)}>
+                    {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Preview table */}
+              <div>
+                <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>Preview (first 5 rows)</p>
+                <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border-soft)' }}>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr style={{ background: 'var(--surface-2)' }}>
+                        <th className="px-3 py-2 text-left font-bold" style={{ color: 'var(--text-muted)' }}>Project Code</th>
+                        <th className="px-3 py-2 text-left font-bold" style={{ color: 'var(--text-muted)' }}>Balance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {csvRows.slice(0, 5).map((row, i) => (
+                        <tr key={i} style={{ borderTop: '1px solid var(--border-soft)' }}>
+                          <td className="px-3 py-2 font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{row[codeCol] || '—'}</td>
+                          <td className="px-3 py-2" style={{ color: 'var(--text-primary)' }}>{row[balanceCol] || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleApplyDues}
+                  disabled={csvUploading || !codeCol || !balanceCol}
+                  className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                >
+                  {csvUploading
+                    ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Updating…</>
+                    : <><Upload className="w-3.5 h-3.5" /> Apply to All Residents</>
+                  }
+                </button>
+                <button
+                  onClick={() => { setCsvHeaders([]); setCsvRows([]); setCsvError('') }}
+                  className="btn-ghost text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Result */}
+          {csvResult && (
+            <div className="card p-5 flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" style={{ color: 'var(--brand)' }} />
+                <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Upload Complete</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl p-4" style={{ background: 'var(--brand-xlight)' }}>
+                  <p className="text-2xl font-bold" style={{ color: 'var(--brand)' }}>{csvResult.updated}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--brand)' }}>Residents updated</p>
+                </div>
+                <div className="rounded-xl p-4" style={{ background: '#fef6e4' }}>
+                  <p className="text-2xl font-bold" style={{ color: '#b45309' }}>{csvResult.notFound}</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#b45309' }}>Not matched / skipped</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCsvResult(null)}
+                className="btn-ghost text-sm self-start"
+              >
+                Upload Another CSV
+              </button>
             </div>
           )}
         </div>

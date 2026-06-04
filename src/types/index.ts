@@ -37,6 +37,7 @@ export interface Profile {
   is_verified: boolean
   avatar_url?: string | null
   bio?: string | null
+  hoa_balance?: number | null
   created_at: string
 }
 
