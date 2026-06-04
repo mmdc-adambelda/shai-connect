@@ -2,14 +2,15 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Newspaper, Megaphone,
   Users, User, ShieldCheck, Video, X,
-  Rss, FileText, BarChart3,
+  Rss, FileText, BarChart3, LogOut,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 
 const navItems = [
@@ -31,6 +32,14 @@ interface SidebarProps {
 export default function Sidebar({ open, onClose, profile }: SidebarProps) {
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin'
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/auth')
+    router.refresh()
+  }
 
   useEffect(() => { onClose() }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -102,6 +111,23 @@ export default function Sidebar({ open, onClose, profile }: SidebarProps) {
       {/* Account section */}
       <div>
         <div className="h-px mx-3 mb-3" style={{ background: 'var(--border-soft)' }} />
+
+        {/* User info chip — mobile only */}
+        {profile && (
+          <div className="px-3 mb-2 md:hidden flex items-center gap-2.5">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white"
+              style={{ background: 'var(--brand)' }}
+            >
+              {profile.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{profile.full_name}</p>
+              <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{profile.unit}</p>
+            </div>
+          </div>
+        )}
+
         <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
           Account
         </p>
@@ -117,6 +143,16 @@ export default function Sidebar({ open, onClose, profile }: SidebarProps) {
             </Link>
           )
         })}
+
+        {/* Logout — always in sidebar (primary on mobile, secondary on desktop) */}
+        <button
+          onClick={handleSignOut}
+          className="nav-link w-full text-left mt-0.5"
+          style={{ color: '#ef4444' }}
+        >
+          <LogOut className="w-4 h-4 flex-shrink-0" />
+          Sign Out
+        </button>
       </div>
     </aside>
   )

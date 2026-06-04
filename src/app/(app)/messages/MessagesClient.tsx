@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Send, Plus, X } from 'lucide-react'
+import { Send, Plus, X, ChevronLeft } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import type { DirectMessage, Profile } from '@/types'
 import clsx from 'clsx'
@@ -14,7 +14,8 @@ function initials(name: string) {
 function Avatar({ name, size = 'sm' }: { name: string; size?: 'sm' | 'md' }) {
   const sz = size === 'md' ? 'w-9 h-9 text-sm' : 'w-8 h-8 text-xs'
   return (
-    <div className={`${sz} rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-400 flex items-center justify-center font-bold flex-shrink-0`}>
+    <div className={`${sz} rounded-full flex items-center justify-center font-bold flex-shrink-0 text-white`}
+      style={{ background: 'var(--brand)' }}>
       {initials(name)}
     </div>
   )
@@ -33,7 +34,6 @@ export default function MessagesClient({
 }) {
   const supabase = createClient()
 
-  // Build conversation list from messages
   const conversationMap = new Map<string, { profile: Profile; lastMessage: DirectMessage }>()
   allMessages.forEach(msg => {
     const other = msg.sender_id === currentUserId
@@ -52,6 +52,7 @@ export default function MessagesClient({
   const [sending, setSending] = useState(false)
   const [showNewDM, setShowNewDM] = useState(false)
   const [convos, setConvos] = useState(conversations)
+  const [mobileView, setMobileView] = useState<'list' | 'thread'>('list')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -63,7 +64,6 @@ export default function MessagesClient({
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [thread])
 
-  // Realtime subscription
   useEffect(() => {
     const channel = supabase
       .channel('direct_messages')
@@ -112,6 +112,12 @@ export default function MessagesClient({
       setConvos(prev => [{ profile, lastMessage: {} as DirectMessage }, ...prev])
     }
     setActiveUserId(profile.id)
+    setMobileView('thread')
+  }
+
+  const selectConvo = (userId: string) => {
+    setActiveUserId(userId)
+    setMobileView('thread')
   }
 
   const activeConvo = convos.find(c => c.profile.id === activeUserId)
@@ -119,29 +125,32 @@ export default function MessagesClient({
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Private Messages</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Secure one-on-one conversations</p>
+        <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Private Messages</h1>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Secure one-on-one conversations</p>
       </div>
 
       {showNewDM && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNewDM(false)}>
           <div className="card p-5 w-full max-w-sm" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-gray-900 dark:text-gray-100">New Message</h2>
-              <button onClick={() => setShowNewDM(false)}><X className="w-4 h-4 text-gray-400" /></button>
+              <h2 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>New Message</h2>
+              <button onClick={() => setShowNewDM(false)} className="btn-icon w-7 h-7"><X className="w-4 h-4" /></button>
             </div>
-            <p className="text-xs text-gray-500 mb-3">Select a resident to message:</p>
+            <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>Select a resident to message:</p>
             <div className="space-y-1 max-h-64 overflow-y-auto">
               {allProfiles.map(p => (
                 <button
                   key={p.id}
                   onClick={() => startNewDM(p)}
-                  className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                  className="w-full flex items-center gap-3 p-2.5 rounded-lg transition-colors text-left"
+                  style={{ background: 'transparent' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   <Avatar name={p.full_name} />
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{p.full_name}</p>
-                    <p className="text-xs text-gray-400">{p.unit}</p>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{p.full_name}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{p.unit}</p>
                   </div>
                 </button>
               ))}
@@ -151,69 +160,104 @@ export default function MessagesClient({
       )}
 
       <div className="card flex overflow-hidden" style={{ height: 'calc(100vh - 200px)', minHeight: '460px' }}>
-        {/* Conversation list */}
-        <div className="w-56 flex-shrink-0 border-r border-gray-100 dark:border-gray-800 flex flex-col">
-          <div className="p-2 border-b border-gray-100 dark:border-gray-800">
-            <button onClick={() => setShowNewDM(true)} className="w-full btn-ghost flex items-center gap-1.5 justify-center text-xs py-1.5">
-              <Plus className="w-3.5 h-3.5" /> New Message
+
+        {/* ── Conversation list ── */}
+        <div className={clsx(
+          'flex-shrink-0 flex flex-col',
+          'border-r',
+          'md:w-64',
+          // mobile: full-width when viewing list, hidden when viewing thread
+          mobileView === 'list' ? 'flex w-full' : 'hidden md:flex',
+        )} style={{ borderColor: 'var(--border-soft)' }}>
+          <div className="p-3 flex-shrink-0" style={{ borderBottom: '1px solid var(--border-soft)' }}>
+            <button
+              onClick={() => setShowNewDM(true)}
+              className="w-full btn-ghost flex items-center gap-1.5 justify-center text-sm py-2.5"
+            >
+              <Plus className="w-4 h-4" /> New Message
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
             {convos.length === 0 && (
-              <p className="text-xs text-gray-400 text-center py-8">No conversations yet</p>
+              <p className="text-sm text-center py-10" style={{ color: 'var(--text-muted)' }}>No conversations yet</p>
             )}
             {convos.map(({ profile, lastMessage }) => (
               <button
                 key={profile.id}
-                onClick={() => setActiveUserId(profile.id)}
+                onClick={() => selectConvo(profile.id)}
                 className={clsx(
-                  'w-full flex items-center gap-2.5 p-3 border-b border-gray-50 dark:border-gray-800/50 text-left transition-colors',
-                  activeUserId === profile.id
-                    ? 'bg-brand-50 dark:bg-brand-900/20'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                  'w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors',
+                  activeUserId === profile.id ? 'border-l-2' : 'border-l-2 border-transparent'
                 )}
+                style={{
+                  borderBottom: '1px solid var(--border-soft)',
+                  borderLeftColor: activeUserId === profile.id ? 'var(--brand)' : 'transparent',
+                  background: activeUserId === profile.id ? 'var(--brand-xlight)' : 'transparent',
+                }}
               >
-                <Avatar name={profile.full_name} />
+                <Avatar name={profile.full_name} size="md" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{profile.full_name}</p>
-                  <p className="text-xs text-gray-400 truncate">{lastMessage?.content || 'Start a conversation'}</p>
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{profile.full_name}</p>
+                  <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    {lastMessage?.content || 'Start a conversation'}
+                  </p>
                 </div>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Thread */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* ── Thread ── */}
+        <div className={clsx(
+          'flex-1 flex-col overflow-hidden',
+          mobileView === 'thread' ? 'flex' : 'hidden md:flex',
+        )}>
           {!activeConvo ? (
-            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+            <div className="flex-1 flex items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
               Select a conversation or start a new one
             </div>
           ) : (
             <>
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+              {/* Thread header */}
+              <div
+                className="px-4 py-3 flex items-center gap-3 flex-shrink-0"
+                style={{ borderBottom: '1px solid var(--border-soft)' }}
+              >
+                {/* Back button — mobile only */}
+                <button
+                  onClick={() => setMobileView('list')}
+                  className="md:hidden btn-icon w-8 h-8 flex-shrink-0 -ml-1"
+                  aria-label="Back to conversations"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
                 <Avatar name={activeConvo.profile.full_name} size="md" />
                 <div>
-                  <p className="font-bold text-sm text-gray-900 dark:text-gray-100">{activeConvo.profile.full_name}</p>
-                  <p className="text-xs text-gray-400">{activeConvo.profile.unit}</p>
+                  <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{activeConvo.profile.full_name}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{activeConvo.profile.unit}</p>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ overscrollBehaviorY: 'contain' }}>
                 {thread.length === 0 && (
-                  <p className="text-center text-sm text-gray-400 py-8">No messages yet. Say hello!</p>
+                  <p className="text-center text-sm py-8" style={{ color: 'var(--text-muted)' }}>No messages yet. Say hello!</p>
                 )}
                 {thread.map(msg => {
                   const isMe = msg.sender_id === currentUserId
                   return (
                     <div key={msg.id} className={clsx('flex gap-2', isMe && 'flex-row-reverse')}>
-                      <div className={clsx(
-                        'max-w-[70%] px-3 py-2 rounded-2xl text-sm',
-                        isMe
-                          ? 'bg-brand-600 text-white rounded-br-sm'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-sm'
-                      )}>
+                      <div
+                        className="max-w-[75%] sm:max-w-[65%] px-4 py-2.5 text-sm leading-relaxed break-words"
+                        style={{
+                          borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                          background: isMe ? 'var(--brand)' : 'var(--surface-2)',
+                          color: isMe ? 'white' : 'var(--text-primary)',
+                          wordBreak: 'break-word',
+                        }}
+                      >
                         {msg.content}
-                        <p className={clsx('text-[10px] mt-1', isMe ? 'text-brand-200' : 'text-gray-400')}>
+                        <p className="text-[10px] mt-1" style={{ color: isMe ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)' }}>
                           {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                         </p>
                       </div>
@@ -222,9 +266,14 @@ export default function MessagesClient({
                 })}
                 <div ref={bottomRef} />
               </div>
-              <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 flex gap-2">
+
+              {/* Input */}
+              <div
+                className="px-4 py-3 flex gap-2 flex-shrink-0"
+                style={{ borderTop: '1px solid var(--border-soft)' }}
+              >
                 <input
-                  className="input flex-1"
+                  className="input flex-1 min-w-0 text-base py-3"
                   placeholder={`Message ${activeConvo.profile.full_name}…`}
                   value={input}
                   onChange={e => setInput(e.target.value)}
@@ -233,7 +282,8 @@ export default function MessagesClient({
                 <button
                   onClick={sendMessage}
                   disabled={!input.trim() || sending}
-                  className="w-10 h-10 rounded-full bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white flex items-center justify-center flex-shrink-0"
+                  className="w-11 h-11 rounded-full text-white flex items-center justify-center flex-shrink-0 disabled:opacity-40 transition-colors"
+                  style={{ background: 'var(--brand)' }}
                 >
                   <Send className="w-4 h-4" />
                 </button>

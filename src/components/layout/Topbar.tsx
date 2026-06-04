@@ -271,7 +271,7 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
         )}
       </div>
 
-      {/* User chip */}
+      {/* User chip — avatar always visible; name + logout only on sm+ */}
       <div className="flex items-center gap-2 pl-2 ml-1" style={{ borderLeft: '1px solid var(--border-soft)' }}>
         <AvatarUI name={profile?.full_name || 'Me'} avatarUrl={profile?.avatar_url} size={30} />
         <div className="hidden sm:block">
@@ -280,7 +280,7 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
           </p>
           <p className="text-[10px] leading-tight" style={{ color: 'var(--text-muted)' }}>{profile?.unit || ''}</p>
         </div>
-        <button onClick={handleSignOut} className="btn-icon ml-1 hover:!bg-red-50 hover:!text-red-500" title="Sign out">
+        <button onClick={handleSignOut} className="hidden sm:flex btn-icon ml-1 hover:!bg-red-50 hover:!text-red-500" title="Sign out">
           <LogOut className="w-3.5 h-3.5" />
         </button>
       </div>

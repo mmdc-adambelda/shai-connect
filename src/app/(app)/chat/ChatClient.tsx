@@ -205,7 +205,7 @@ export default function ChatClient({
           style={{ borderTop: '1px solid var(--border-soft)' }}
         >
           <input
-            className="input flex-1 min-w-0"
+            className="input flex-1 min-w-0 text-base py-3"
             placeholder={`Message ${activeRoom}…`}
             value={input}
             onChange={e => setInput(e.target.value)}
