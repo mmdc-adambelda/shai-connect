@@ -458,22 +458,22 @@ function PostCard({
   }
 
   return (
-    <div className="card animate-appear" style={{ padding: '20px' }}>
-      <div className="flex items-start gap-3 mb-3">
+    <div className="card animate-appear" style={{ padding: '18px 20px' }}>
+      <div className="flex items-start gap-3 mb-3.5">
         <AvatarUI
           name={author?.full_name || 'Resident'}
           avatarUrl={author?.avatar_url}
-          size={42}
+          size={40}
         />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm leading-tight" style={{ color: 'var(--text-primary)' }}>
               {author?.full_name || 'Resident'}
             </span>
             <RoleBadge role={author?.role || 'resident'} />
             <span className="badge badge-gray text-[10px]">{post.phase_tag}</span>
           </div>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs mt-0.5 font-medium" style={{ color: 'var(--text-muted)' }}>
             {author?.unit} · {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
           </p>
         </div>
@@ -516,8 +516,8 @@ function PostCard({
       </div>
 
       <p
-        className="text-sm leading-relaxed whitespace-pre-wrap mb-3"
-        style={{ color: 'var(--text-primary)' }}
+        className="text-sm leading-relaxed whitespace-pre-wrap mb-4"
+        style={{ color: 'var(--text-primary)', lineHeight: '1.65' }}
       >
         {post.content}
       </p>
@@ -780,9 +780,11 @@ export default function FeedClient({
       </div>
 
       <div
-        className="card p-3.5 mb-5 flex gap-3 items-center cursor-pointer transition-all hover:shadow-md"
+        className="card p-3.5 mb-5 flex gap-3 items-center cursor-pointer transition-all"
         onClick={() => setShowCompose(true)}
         style={{ borderRadius: 'var(--radius-lg)' }}
+        onMouseEnter={e => (e.currentTarget.style.boxShadow = 'var(--shadow-md)')}
+        onMouseLeave={e => (e.currentTarget.style.boxShadow = 'var(--shadow-sm)')}
       >
         <AvatarUI
           name={currentProfile?.full_name || 'Me'}
@@ -790,18 +792,13 @@ export default function FeedClient({
           size={38}
         />
         <div
-          className="flex-1 px-4 py-2.5 text-sm rounded-full transition-colors"
+          className="flex-1 px-4 py-2.5 text-sm rounded-full border transition-colors font-medium"
           style={{
             background: 'var(--surface-2)',
             color: 'var(--text-muted)',
+            border: '1px solid var(--border)',
             cursor: 'text',
           }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = 'var(--surface-3)')
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = 'var(--surface-2)')
-          }
         >
           What&apos;s on your mind,{' '}
           {currentProfile?.full_name?.split(' ')[0] || 'neighbor'}?

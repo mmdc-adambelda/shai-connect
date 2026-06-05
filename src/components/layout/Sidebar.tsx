@@ -54,29 +54,29 @@ export default function Sidebar({ open, onClose, profile }: SidebarProps) {
 
   const Inner = () => (
     <aside
-      className="w-60 flex-shrink-0 flex flex-col px-3 gap-0.5 overflow-y-auto h-full"
+      className="w-60 flex-shrink-0 flex flex-col px-2 gap-0.5 overflow-y-auto h-full"
       style={{
         background: 'var(--surface)',
-        borderRight: '1px solid var(--border-soft)',
+        borderRight: '1px solid var(--border)',
         paddingTop: 'max(1.25rem, env(safe-area-inset-top))',
         paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))',
       }}
     >
       {/* Logo row */}
-      <div className="px-3 mb-6 flex items-center justify-between">
-        <Link href="/feed" className="flex items-center gap-2.5 group" onClick={onClose}>
+      <div className="px-2 mb-5 flex items-center justify-between">
+        <Link href="/feed" className="flex items-center gap-3 group" onClick={onClose}>
           <Image
             src="/logo.png"
             alt="SHAI Connect"
-            width={36}
-            height={36}
+            width={34}
+            height={34}
             className="rounded-xl flex-shrink-0 transition-transform group-hover:scale-105"
           />
           <div>
-            <p className="font-display text-base font-bold leading-tight" style={{ color: 'var(--brand)' }}>
+            <p className="text-sm font-bold leading-tight tracking-tight" style={{ color: 'var(--text-primary)' }}>
               SHAI Connect
             </p>
-            <p className="text-[10px] leading-tight" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-[10px] leading-tight font-medium" style={{ color: 'var(--text-muted)' }}>
               Sabella HOA Inc.
             </p>
           </div>
@@ -92,15 +92,15 @@ export default function Sidebar({ open, onClose, profile }: SidebarProps) {
 
       {/* Main nav */}
       <div className="mb-1">
-        <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-          Main
+        <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+          Navigation
         </p>
         {navItems.map(({ label, href, icon: Icon, badge }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link key={href} href={href} className={clsx('nav-link', active && 'active')}>
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              <span className="flex-1">{label}</span>
+              <Icon className="w-[15px] h-[15px] flex-shrink-0" />
+              <span className="flex-1 text-sm">{label}</span>
               {badge !== null && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: 'var(--brand)' }}>
                   {badge}
@@ -115,11 +115,11 @@ export default function Sidebar({ open, onClose, profile }: SidebarProps) {
 
       {/* Account section */}
       <div>
-        <div className="h-px mx-3 mb-3" style={{ background: 'var(--border-soft)' }} />
+        <div className="h-px mx-2 mb-3" style={{ background: 'var(--border)' }} />
 
         {/* User info chip — mobile only */}
         {profile && (
-          <div className="px-3 mb-2 md:hidden flex items-center gap-2.5">
+          <div className="px-3 mb-3 md:hidden flex items-center gap-2.5 py-2 rounded-xl" style={{ background: 'var(--surface-2)' }}>
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white"
               style={{ background: 'var(--brand)' }}
@@ -128,7 +128,7 @@ export default function Sidebar({ open, onClose, profile }: SidebarProps) {
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{profile.full_name}</p>
-              <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{profile.unit}</p>
+              <p className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>{profile.unit}</p>
             </div>
           </div>
         )}

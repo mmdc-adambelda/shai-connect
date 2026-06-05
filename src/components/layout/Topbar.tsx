@@ -117,28 +117,28 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
       style={{
         paddingTop: 'env(safe-area-inset-top)',
         background: 'var(--surface)',
-        borderBottom: '1px solid var(--border-soft)',
+        borderBottom: '1px solid var(--border)',
         boxShadow: 'var(--shadow-xs)',
       }}
     >
-    <div className="h-14 flex items-center px-4 gap-2">
+    <div className="h-14 flex items-center px-3 gap-1">
       {/* Hamburger — mobile only */}
       <button
         onClick={onMenuClick}
         className="md:hidden btn-icon flex-shrink-0"
         aria-label="Open menu"
       >
-        <Menu className="w-4 h-4" />
+        <Menu className="w-[18px] h-[18px]" />
       </button>
 
       {/* Desktop search */}
-      <div className="flex-1 max-w-xs hidden md:block">
+      <div className="flex-1 max-w-sm hidden md:block">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
           <input
-            className="input py-2 pl-9 text-sm h-9"
+            className="input py-2 pl-9 text-sm h-9 bg-surface-2"
             placeholder="Search residents, posts…"
-            style={{ borderRadius: '99px' }}
+            style={{ borderRadius: '99px', background: 'var(--surface-2)', fontSize: '0.8125rem' }}
           />
         </div>
       </div>
@@ -151,7 +151,7 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
         className="md:hidden btn-icon"
         aria-label="Search"
       >
-        <Search className="w-4 h-4" />
+        <Search className="w-[18px] h-[18px]" />
       </button>
 
       {/* Quick-nav icons: Phase Chat · Messages · Ticket */}
@@ -167,12 +167,12 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
             href={href}
             className="btn-icon relative"
             title={title}
-            style={active ? { color: 'var(--brand)' } : undefined}
+            style={active ? { color: 'var(--brand)', background: 'var(--brand-xlight)' } : undefined}
           >
-            <Icon className="w-4 h-4" />
+            <Icon className="w-[18px] h-[18px]" />
             {active && (
               <span
-                className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
                 style={{ background: 'var(--brand)' }}
               />
             )}
@@ -182,13 +182,13 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
 
       {/* Theme toggle */}
       <button onClick={toggle} className="btn-icon" title="Toggle theme">
-        {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        {theme === 'dark' ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
       </button>
 
       {/* Notifications */}
       <div className="relative">
         <button onClick={() => setShowNotifs(!showNotifs)} className="btn-icon relative" title="Notifications">
-          <Bell className="w-4 h-4" />
+          <Bell className="w-[18px] h-[18px]" />
           {unreadCount > 0 && (
             <span className="absolute top-1 right-1 w-2 h-2 rounded-full border-2"
               style={{ background: '#ef4444', borderColor: 'var(--surface)' }} />

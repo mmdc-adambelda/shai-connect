@@ -99,8 +99,8 @@ export default function ChatClient({
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-4">
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Phase Chat Rooms</h1>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Real-time conversations by residential phase</p>
+        <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Phase Chat</h1>
+        <p className="text-sm font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>Real-time conversations with your neighbors</p>
       </div>
 
       <div className="card overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 190px)', minHeight: '460px' }}>
@@ -172,24 +172,25 @@ export default function ChatClient({
             const sender = msg.profiles as unknown as Profile
             const isMe = msg.sender_id === currentUserId
             return (
-              <div key={msg.id} className={clsx('flex gap-2', isMe && 'flex-row-reverse')}>
+              <div key={msg.id} className={clsx('flex gap-2.5', isMe && 'flex-row-reverse')}>
                 {!isMe && <Avatar name={sender?.full_name || 'Resident'} />}
                 <div className={clsx('max-w-[75%] sm:max-w-[65%]', isMe && 'items-end flex flex-col')}>
                   {!isMe && (
-                    <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{sender?.full_name}</p>
+                    <p className="text-xs font-semibold mb-1 ml-1" style={{ color: 'var(--text-secondary)' }}>{sender?.full_name}</p>
                   )}
                   <div
-                    className="px-3 py-2 text-sm leading-relaxed break-words"
+                    className="px-3.5 py-2.5 text-sm leading-relaxed break-words"
                     style={{
-                      borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                      background: isMe ? 'var(--brand)' : 'var(--surface-2)',
+                      borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                      background: isMe ? 'var(--brand)' : 'var(--surface-3)',
                       color: isMe ? 'white' : 'var(--text-primary)',
                       wordBreak: 'break-word',
+                      border: isMe ? 'none' : '1px solid var(--border)',
                     }}
                   >
                     {msg.content}
                   </div>
-                  <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                  <p className="text-[10px] mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>
                     {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                   </p>
                 </div>
