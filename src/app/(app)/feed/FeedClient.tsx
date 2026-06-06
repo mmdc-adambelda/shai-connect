@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
 import {
   ImagePlus, FileText, Loader2, X, Paperclip,
-  MessageCircle, Share2, ChevronDown, ChevronUp, Send, MoreHorizontal
+  MessageCircle, Share2, ChevronDown, ChevronUp, Send, MoreHorizontal, Info,
 } from 'lucide-react'
 import type { Post, Profile, Comment, ReactionType } from '@/types'
 import clsx from 'clsx'
@@ -673,8 +673,8 @@ function ComposeModal({
 
           {selectedFile && (
             <div
-              className="mt-2 flex items-center gap-2 text-xs p-2 rounded-lg"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-muted)' }}
+              className="mt-2 flex items-center gap-2 text-xs p-2.5 rounded-lg"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
             >
               <Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="truncate">{selectedFile.name}</span>
@@ -686,6 +686,22 @@ function ComposeModal({
               </button>
             </div>
           )}
+
+          {/* Caption required hint — shows when file attached but no text entered */}
+          {selectedFile && !content.trim() && (
+            <div
+              className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs font-medium"
+              style={{
+                background: '#FEF9EC',
+                border: '1px solid #F3D77A',
+                color: '#854D0E',
+              }}
+            >
+              <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: '#D97706' }} />
+              <span>A caption is required when sharing a photo or file. Write something above to enable posting.</span>
+            </div>
+          )}
+
           {fileError && <p className="text-xs text-red-500 mt-1">{fileError}</p>}
 
           <input
@@ -738,9 +754,10 @@ function ComposeModal({
             onClick={handlePost}
             disabled={posting || !content.trim()}
             className="btn-primary gap-2"
+            title={!content.trim() ? 'Add a caption to post' : undefined}
           >
             {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-            Post
+            {posting ? 'Posting…' : 'Post'}
           </button>
         </div>
       </div>
