@@ -87,5 +87,5 @@ export function useFollow(targetUserId: string, initialIsFollowing: boolean) {
     }
   }, [targetUserId, isFollowing, loading])
 
-  return { isFollowing, toggle, loading }
+  return { isFollowing, setIsFollowing, toggle, loading }
 }

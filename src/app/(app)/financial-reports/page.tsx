@@ -1,7 +1,7 @@
 import {
   BarChart3, TrendingUp, DollarSign, Wallet,
   Users, ArrowUpRight, ArrowDownRight, Download,
-  FileText, Calendar, CheckCircle2, ExternalLink,
+  FileText, Calendar, CheckCircle2, ExternalLink, Clock,
 } from 'lucide-react'
 
 /* ─── Financial summary data ─────────────────────────── */
@@ -58,9 +58,14 @@ const EXPENSE_BREAKDOWN = [
   { label: 'Administrative', amount: 'PHP 639,854', pct: 7 },
 ]
 
+/* ─── PDF availability ───────────────────────────────── */
+// Set PDF_URL to a real URL once the file is uploaded to Supabase Storage or a CDN.
+// Leave as null to show the "Coming soon" state.
+const PDF_URL: string | null = null
+// Example when ready: const PDF_URL = 'https://your-supabase-url/storage/v1/object/public/shai-uploads/SHAI-2025-Audited-FS.pdf'
+
 /* ─── Main page ──────────────────────────────────────── */
 export default function FinancialReportsPage() {
-  const PDF_URL = '/SHAI-2025-Audited-FS.pdf'
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -187,23 +192,36 @@ export default function FinancialReportsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <a
-              href={PDF_URL}
-              download="SHAI-2025-Audited-FS.pdf"
-              className="btn-ghost flex items-center gap-1.5 text-xs px-3 py-2"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Download
-            </a>
-            <a
-              href={PDF_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-ghost flex items-center gap-1.5 text-xs px-3 py-2"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              Open
-            </a>
+            {PDF_URL ? (
+              <>
+                <a
+                  href={PDF_URL}
+                  download="SHAI-2025-Audited-FS.pdf"
+                  className="btn-ghost flex items-center gap-1.5 text-xs px-3 py-2"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download
+                </a>
+                <a
+                  href={PDF_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-ghost flex items-center gap-1.5 text-xs px-3 py-2"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Open
+                </a>
+              </>
+            ) : (
+              <div
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg font-medium"
+                style={{ background: '#FEF9EC', color: '#854D0E', border: '1px solid #F3D77A' }}
+                title="The PDF file will be available once uploaded by the administration"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                PDF Coming Soon
+              </div>
+            )}
           </div>
         </div>
       </div>

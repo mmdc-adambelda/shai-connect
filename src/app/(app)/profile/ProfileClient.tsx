@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   Edit2, Save, X, CheckCircle, Lock, Eye, EyeOff,
@@ -50,7 +50,16 @@ function Avatar({ name, avatarUrl, size = 80 }: { name: string; avatarUrl?: stri
 
 // ── Follow Button ─────────────────────────────────────────────────
 function FollowButton({ targetUserId, initialIsFollowing }: { targetUserId: string; initialIsFollowing: boolean }) {
-  const { isFollowing, toggle, loading } = useFollow(targetUserId, initialIsFollowing)
+  const { isFollowing, setIsFollowing, toggle, loading } = useFollow(targetUserId, initialIsFollowing)
+
+  // Verify actual follow state from API on mount to fix any SSR/RLS mismatch
+  useEffect(() => {
+    fetch(`/api/users/${targetUserId}/follow`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && typeof d.isFollowing === 'boolean') setIsFollowing(d.isFollowing) })
+      .catch(() => {})
+  }, [targetUserId])
+
   return (
     <button onClick={toggle} disabled={loading} className={`btn-follow ${isFollowing ? 'following' : 'not-following'}`}>
       {isFollowing ? <UserCheck className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
@@ -149,10 +158,26 @@ export default function ProfileClient({
   const [followCount, setFollowCount] = useState({ followers: followerCount, following: followingCount })
   const [peopleModal, setPeopleModal] = useState<'followers' | 'following' | null>(null)
 
-  // Notifications
-  const [notifs, setNotifs] = useState<Record<string, boolean>>({
-    announcements: true, chat: true, dm: true, reactions: false,
+  // Notifications — persisted to localStorage per user
+  const NOTIF_KEY = `notif_prefs_${profile?.id}`
+  const [notifs, setNotifs] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return { announcements: true, chat: true, dm: true, reactions: false }
+    try {
+      const saved = localStorage.getItem(NOTIF_KEY)
+      return saved ? JSON.parse(saved) : { announcements: true, chat: true, dm: true, reactions: false }
+    } catch { return { announcements: true, chat: true, dm: true, reactions: false } }
   })
+  const [notifSaved, setNotifSaved] = useState(false)
+
+  const toggleNotif = (key: string) => {
+    setNotifs(p => {
+      const next = { ...p, [key]: !p[key] }
+      try { localStorage.setItem(NOTIF_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+    setNotifSaved(true)
+    setTimeout(() => setNotifSaved(false), 2000)
+  }
 
   // ── Avatar upload ─────────────────────────────────────────────
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -566,7 +591,14 @@ export default function ProfileClient({
 
           {/* Notifications */}
           <div className="card p-5">
-            <h3 className="font-semibold text-sm mb-4" style={{ color: 'var(--text-primary)' }}>Notification Preferences</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Notification Preferences</h3>
+              {notifSaved && (
+                <span className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--brand)' }}>
+                  <CheckCircle className="w-3.5 h-3.5" /> Saved
+                </span>
+              )}
+            </div>
             <div className="space-y-0.5">
               {NOTIF_PREFS.map(({ key, label, desc }) => (
                 <div key={key} className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid var(--border-soft)' }}>
@@ -574,7 +606,7 @@ export default function ProfileClient({
                     <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</p>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{desc}</p>
                   </div>
-                  <button onClick={() => setNotifs(p => ({ ...p, [key]: !p[key] }))} className={`toggle ${notifs[key] ? 'on' : ''}`} />
+                  <button onClick={() => toggleNotif(key)} className={`toggle ${notifs[key] ? 'on' : ''}`} />
                 </div>
               ))}
             </div>

@@ -136,9 +136,15 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
           <input
-            className="input py-2 pl-9 text-sm h-9 bg-surface-2"
-            placeholder="Search residents, posts…"
+            className="input py-2 pl-9 text-sm h-9"
+            placeholder="Search residents…"
             style={{ borderRadius: '99px', background: 'var(--surface-2)', fontSize: '0.8125rem' }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                const q = (e.target as HTMLInputElement).value.trim()
+                if (q) router.push(`/residents?q=${encodeURIComponent(q)}`)
+              }
+            }}
           />
         </div>
       </div>

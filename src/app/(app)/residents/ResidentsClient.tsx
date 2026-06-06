@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Search, UserCheck, UserPlus, User } from 'lucide-react'
 import type { Profile } from '@/types'
 import Link from 'next/link'
 import clsx from 'clsx'
+import { useSearchParams } from 'next/navigation'
 
 function initials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -51,7 +52,13 @@ export default function ResidentsClient({
   initialFollowing: Set<string>
 }) {
   const supabase = createClient()
-  const [search, setSearch]           = useState('')
+  const searchParams = useSearchParams()
+  const [search, setSearch] = useState(searchParams.get('q') ?? '')
+
+  useEffect(() => {
+    const q = searchParams.get('q')
+    if (q) setSearch(q)
+  }, [searchParams])
   const [following, setFollowing]     = useState<Set<string>>(initialFollowing)
   const [loadingIds, setLoadingIds]   = useState<Set<string>>(new Set())
   const [phaseFilter, setPhaseFilter] = useState('All')

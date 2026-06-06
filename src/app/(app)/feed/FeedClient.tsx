@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
 import {
   ImagePlus, FileText, Loader2, X, Paperclip,
-  MessageCircle, Share2, ChevronDown, ChevronUp, Send, MoreHorizontal, Info,
+  MessageCircle, Share2, ChevronDown, ChevronUp, Send, MoreHorizontal, Info, Check,
 } from 'lucide-react'
 import type { Post, Profile, Comment, ReactionType } from '@/types'
 import clsx from 'clsx'
@@ -152,9 +152,11 @@ function ReactionBar({
           )}
         </button>
 
-        <button className="reaction-btn ml-auto">
-          <Share2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Share</span>
+        <button onClick={handleShare} className="reaction-btn ml-auto">
+          {shared ? <Check className="w-4 h-4" style={{ color: 'var(--brand)' }} /> : <Share2 className="w-4 h-4" />}
+          <span className="hidden sm:inline" style={{ color: shared ? 'var(--brand)' : undefined }}>
+            {shared ? 'Copied!' : 'Share'}
+          </span>
         </button>
       </div>
 
@@ -451,6 +453,19 @@ function PostCard({
 }) {
   const author = post.profiles as unknown as Profile
   const [menuOpen, setMenuOpen] = useState(false)
+  const [shared, setShared] = useState(false)
+
+  const handleShare = async () => {
+    const url  = `${window.location.origin}/feed`
+    const text = `${author?.full_name || 'A neighbor'} posted on SHAI Connect: "${post.content.slice(0, 100)}${post.content.length > 100 ? '…' : ''}"`
+    if (navigator.share) {
+      try { await navigator.share({ title: 'SHAI Connect', text, url }) } catch {}
+    } else {
+      try { await navigator.clipboard.writeText(url) } catch {}
+      setShared(true)
+      setTimeout(() => setShared(false), 2500)
+    }
+  }
 
   const reactionCounts: Record<string, number> = {}
   for (const rc of post.reaction_counts ?? []) {
