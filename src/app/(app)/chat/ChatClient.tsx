@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Send, ChevronDown } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -40,7 +40,14 @@ export default function ChatClient({
   const [loadingRoom, setLoadingRoom] = useState(false)
   const [roomPickerOpen, setRoomPickerOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const supabase = createClient()
+
+  const resizeChatInput = useCallback((el: HTMLTextAreaElement | null) => {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -94,6 +101,10 @@ export default function ChatClient({
     })
     setInput('')
     setSending(false)
+    if (chatInputRef.current) {
+      chatInputRef.current.style.height = 'auto'
+      chatInputRef.current.focus()
+    }
   }
 
   return (
@@ -205,12 +216,15 @@ export default function ChatClient({
           className="px-4 py-3 flex gap-2 flex-shrink-0"
           style={{ borderTop: '1px solid var(--border-soft)' }}
         >
-          <input
-            className="input flex-1 min-w-0 text-base py-3"
-            placeholder={`Message ${activeRoom}…`}
+          <textarea
+            ref={chatInputRef}
+            rows={1}
+            className="input flex-1 min-w-0 text-base"
+            placeholder={`Message ${activeRoom}… (Shift+Enter for new line)`}
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => { setInput(e.target.value); resizeChatInput(e.target) }}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
+            style={{ resize: 'none', overflowY: 'hidden', minHeight: '44px', maxHeight: '120px', lineHeight: '1.5', paddingTop: '10px', paddingBottom: '10px' }}
           />
           <button
             onClick={sendMessage}

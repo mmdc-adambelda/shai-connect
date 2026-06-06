@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Send, Plus, X, ChevronLeft } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -54,6 +54,13 @@ export default function MessagesClient({
   const [convos, setConvos] = useState(conversations)
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const dmInputRef = useRef<HTMLTextAreaElement>(null)
+
+  const resizeDmInput = useCallback((el: HTMLTextAreaElement | null) => {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  }, [])
 
   useEffect(() => {
     if (!activeUserId) return
@@ -104,6 +111,10 @@ export default function MessagesClient({
     })
     setInput('')
     setSending(false)
+    if (dmInputRef.current) {
+      dmInputRef.current.style.height = 'auto'
+      dmInputRef.current.focus()
+    }
   }
 
   const startNewDM = async (profile: Profile) => {
@@ -272,12 +283,15 @@ export default function MessagesClient({
                 className="px-4 py-3 flex gap-2 flex-shrink-0"
                 style={{ borderTop: '1px solid var(--border-soft)' }}
               >
-                <input
-                  className="input flex-1 min-w-0 text-base py-3"
-                  placeholder={`Message ${activeConvo.profile.full_name}…`}
+                <textarea
+                  ref={dmInputRef}
+                  rows={1}
+                  className="input flex-1 min-w-0 text-base"
+                  placeholder={`Message ${activeConvo.profile.full_name}… (Shift+Enter for new line)`}
                   value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); sendMessage() } }}
+                  onChange={e => { setInput(e.target.value); resizeDmInput(e.target) }}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
+                  style={{ resize: 'none', overflowY: 'hidden', minHeight: '44px', maxHeight: '120px', lineHeight: '1.5', paddingTop: '10px', paddingBottom: '10px' }}
                 />
                 <button
                   onClick={sendMessage}
