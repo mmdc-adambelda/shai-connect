@@ -49,7 +49,19 @@ function ReactionBar({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [commentCount, setCommentCount] = useState(initialCommentCount)
+  const [shared, setShared] = useState(false)
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/feed`
+    if (navigator.share) {
+      try { await navigator.share({ title: 'SHAI Connect', url }) } catch {}
+    } else {
+      try { await navigator.clipboard.writeText(url) } catch {}
+      setShared(true)
+      setTimeout(() => setShared(false), 2500)
+    }
+  }
 
   const topReactions = Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
@@ -453,19 +465,6 @@ function PostCard({
 }) {
   const author = post.profiles as unknown as Profile
   const [menuOpen, setMenuOpen] = useState(false)
-  const [shared, setShared] = useState(false)
-
-  const handleShare = async () => {
-    const url  = `${window.location.origin}/feed`
-    const text = `${author?.full_name || 'A neighbor'} posted on SHAI Connect: "${post.content.slice(0, 100)}${post.content.length > 100 ? '…' : ''}"`
-    if (navigator.share) {
-      try { await navigator.share({ title: 'SHAI Connect', text, url }) } catch {}
-    } else {
-      try { await navigator.clipboard.writeText(url) } catch {}
-      setShared(true)
-      setTimeout(() => setShared(false), 2500)
-    }
-  }
 
   const reactionCounts: Record<string, number> = {}
   for (const rc of post.reaction_counts ?? []) {
