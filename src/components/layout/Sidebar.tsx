@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   Newspaper, Megaphone,
   Users, User, ShieldCheck, Video, X,
-  Rss, FileText, BarChart3, LogOut,
+  Rss, FileText, BarChart3, LogOut, Phone,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useEffect } from 'react'
@@ -21,6 +21,7 @@ const navItems = [
   { label: 'Financial Reports',href: '/financial-reports', icon: BarChart3,  badge: null },
   { label: 'Residents',        href: '/residents',         icon: Users,      badge: null },
   { label: 'General Assembly', href: '/general-assembly',  icon: Video,      badge: null },
+  { label: 'Important Contacts', href: '/contacts',         icon: Phone,      badge: null },
 ]
 
 interface SidebarProps {
