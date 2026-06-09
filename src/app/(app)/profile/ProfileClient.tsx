@@ -99,7 +99,7 @@ function PeopleModal({ title, userId, type, onClose }: {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{person.full_name}</p>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Block {person.block_no}, Lot {person.lot_no} · {person.phase}
+                  {person.phase}
                 </p>
               </div>
             </Link>
@@ -139,8 +139,9 @@ export default function ProfileClient({
   const [saved, setSaved]       = useState(false)
   const [saveError, setSaveError] = useState('')
 
-  // Avatar
+  // Avatar — re-sync when viewing a different profile
   const [avatarUrl, setAvatarUrl]           = useState(profile?.avatar_url ?? null)
+  useEffect(() => { setAvatarUrl(profile?.avatar_url ?? null) }, [profile?.id])
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [avatarError, setAvatarError]       = useState('')
   const avatarInputRef = useRef<HTMLInputElement>(null)
@@ -251,7 +252,7 @@ export default function ProfileClient({
             {isOwnProfile ? 'My Profile' : profile?.full_name}
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {isOwnProfile ? 'Manage your account and preferences' : `${locationDisplay} · ${profile?.phase}`}
+            {isOwnProfile ? 'Manage your account and preferences' : profile?.phase}
           </p>
         </div>
         {saved && (
@@ -285,7 +286,7 @@ export default function ProfileClient({
               )}
             </div>
             <div className="flex gap-2 mt-10">
-              {!isOwnProfile && profile?.id && <FollowButton targetUserId={profile.id} initialIsFollowing={initialIsFollowing} />}
+              {!isOwnProfile && profile?.id && <FollowButton key={profile.id} targetUserId={profile.id} initialIsFollowing={initialIsFollowing} />}
               {isOwnProfile && !editing && (
                 <button onClick={() => setEditing(true)} className="btn-ghost py-2 px-3 text-xs gap-1.5">
                   <Edit2 className="w-3.5 h-3.5" /> Edit Profile
@@ -306,7 +307,7 @@ export default function ProfileClient({
               </div>
               <div className="flex items-center gap-1.5 text-sm mb-1" style={{ color: 'var(--text-muted)' }}>
                 <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                {locationDisplay} · {profile?.phase}
+                {isOwnProfile ? `${locationDisplay} · ${profile?.phase}` : profile?.phase}
               </div>
               {/* SHPY code — always visible, locked icon */}
               <div className="flex items-center gap-1.5 text-sm mb-2" style={{ color: 'var(--text-muted)' }}>

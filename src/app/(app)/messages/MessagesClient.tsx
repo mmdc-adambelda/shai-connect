@@ -51,8 +51,12 @@ export default function MessagesClient({
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [showNewDM, setShowNewDM] = useState(false)
+  const [newDMSearch, setNewDMSearch] = useState('')
   const [convos, setConvos] = useState(conversations)
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list')
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const dmInputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -92,6 +96,27 @@ export default function MessagesClient({
     return () => { supabase.removeChannel(channel) }
   }, [activeUserId])
 
+  // Dismiss active message toolbar on outside click
+  useEffect(() => {
+    if (!activeMessageId) return
+    const close = () => setActiveMessageId(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [activeMessageId])
+
+  const updateDM = async (id: string, content: string) => {
+    if (!content.trim()) return
+    await supabase.from('direct_messages').update({ content: content.trim() }).eq('id', id).eq('sender_id', currentUserId)
+    setThread(prev => prev.map(m => m.id === id ? { ...m, content: content.trim() } : m))
+    setEditingId(null)
+  }
+
+  const deleteDM = async (id: string) => {
+    await supabase.from('direct_messages').delete().eq('id', id).eq('sender_id', currentUserId)
+    setThread(prev => prev.filter(m => m.id !== id))
+    setActiveMessageId(null)
+  }
+
   const loadThread = async (userId: string) => {
     const { data } = await supabase
       .from('direct_messages')
@@ -119,6 +144,7 @@ export default function MessagesClient({
 
   const startNewDM = async (profile: Profile) => {
     setShowNewDM(false)
+    setNewDMSearch('')
     if (!convos.find(c => c.profile.id === profile.id)) {
       setConvos(prev => [{ profile, lastMessage: {} as DirectMessage }, ...prev])
     }
@@ -141,15 +167,21 @@ export default function MessagesClient({
       </div>
 
       {showNewDM && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNewDM(false)}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setShowNewDM(false); setNewDMSearch('') }}>
           <div className="card p-5 w-full max-w-sm" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>New Message</h2>
-              <button onClick={() => setShowNewDM(false)} className="btn-icon w-7 h-7"><X className="w-4 h-4" /></button>
+              <button onClick={() => { setShowNewDM(false); setNewDMSearch('') }} className="btn-icon w-7 h-7"><X className="w-4 h-4" /></button>
             </div>
-            <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>Select a resident to message:</p>
+            <input
+              className="input text-sm w-full mb-3"
+              placeholder="Search residents…"
+              value={newDMSearch}
+              onChange={e => setNewDMSearch(e.target.value)}
+              autoFocus
+            />
             <div className="space-y-1 max-h-64 overflow-y-auto">
-              {allProfiles.map(p => (
+              {allProfiles.filter(p => p.full_name.toLowerCase().includes(newDMSearch.toLowerCase())).map(p => (
                 <button
                   key={p.id}
                   onClick={() => startNewDM(p)}
@@ -258,17 +290,78 @@ export default function MessagesClient({
                   const isMe = msg.sender_id === currentUserId
                   return (
                     <div key={msg.id} className={clsx('flex gap-2', isMe && 'flex-row-reverse')}>
-                      <div
-                        className="max-w-[75%] sm:max-w-[65%] px-4 py-2.5 text-sm leading-relaxed break-words"
-                        style={{
-                          borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                          background: isMe ? 'var(--brand)' : 'var(--surface-2)',
-                          color: isMe ? 'white' : 'var(--text-primary)',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        {msg.content}
-                        <p className="text-[10px] mt-1" style={{ color: isMe ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)' }}>
+                      <div className={clsx('max-w-[75%] sm:max-w-[65%]', isMe && 'items-end flex flex-col')}>
+                        {/* Message bubble with hover/tap actions for own messages */}
+                        <div className="group relative">
+                          {isMe && editingId !== msg.id && (
+                            <div
+                              className={clsx(
+                                'absolute -top-9 right-0 flex gap-0.5 px-2 py-1 rounded-lg shadow-md z-10 transition-opacity',
+                                activeMessageId === msg.id
+                                  ? 'opacity-100'
+                                  : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'
+                              )}
+                              style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)' }}
+                              onClick={e => e.stopPropagation()}
+                            >
+                              <button
+                                onClick={() => { setEditingId(msg.id); setEditContent(msg.content); setActiveMessageId(null) }}
+                                className="text-xs px-2 py-1 rounded-md font-medium transition-colors"
+                                style={{ color: 'var(--text-secondary)' }}
+                                onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand)')}
+                                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                              >Edit</button>
+                              <button
+                                onClick={() => deleteDM(msg.id)}
+                                className="text-xs px-2 py-1 rounded-md font-medium transition-colors"
+                                style={{ color: 'var(--text-secondary)' }}
+                                onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                              >Unsend</button>
+                            </div>
+                          )}
+
+                          {editingId === msg.id ? (
+                            <div className="flex flex-col gap-1.5">
+                              <input
+                                className="input text-sm"
+                                value={editContent}
+                                onChange={e => setEditContent(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); updateDM(msg.id, editContent) }
+                                  if (e.key === 'Escape') setEditingId(null)
+                                }}
+                                autoFocus
+                              />
+                              <div className="flex gap-1.5 justify-end">
+                                <button onClick={() => setEditingId(null)} className="btn-ghost py-1 px-2 text-xs">Cancel</button>
+                                <button
+                                  onClick={() => updateDM(msg.id, editContent)}
+                                  disabled={!editContent.trim()}
+                                  className="btn-primary py-1 px-2 text-xs"
+                                >Save</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              className="px-4 py-2.5 text-sm leading-relaxed break-words"
+                              style={{
+                                borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                                background: isMe ? 'var(--brand)' : 'var(--surface-2)',
+                                color: isMe ? 'white' : 'var(--text-primary)',
+                                wordBreak: 'break-word',
+                                cursor: isMe ? 'pointer' : 'default',
+                              }}
+                              onClick={isMe ? e => {
+                                e.stopPropagation()
+                                setActiveMessageId(prev => prev === msg.id ? null : msg.id)
+                              } : undefined}
+                            >
+                              {msg.content}
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-[10px] mt-1" style={{ color: isMe ? 'var(--text-muted)' : 'var(--text-muted)' }}>
                           {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                         </p>
                       </div>

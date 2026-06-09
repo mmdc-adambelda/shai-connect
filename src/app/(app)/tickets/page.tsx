@@ -9,5 +9,12 @@ export default async function TicketsPage() {
     .select('*')
     .eq('id', user!.id)
     .single()
-  return <TicketClient profile={profile} />
+
+  const { data: myTickets } = await supabase
+    .from('support_tickets')
+    .select('*')
+    .eq('user_id', user!.id)
+    .order('created_at', { ascending: false })
+
+  return <TicketClient profile={profile} myTickets={myTickets ?? []} />
 }

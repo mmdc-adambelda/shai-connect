@@ -95,7 +95,7 @@ export interface SupportTicket {
   type: 'bug' | 'feature' | 'feedback'
   subject: string
   description: string
-  status: 'open' | 'resolved'
+  status: 'open' | 'in_progress' | 'resolved' | 'closed'
   created_at: string
   profiles?: { full_name: string; unit: string }
 }

@@ -39,6 +39,9 @@ export default function ChatClient({
   const [sending, setSending] = useState(false)
   const [loadingRoom, setLoadingRoom] = useState(false)
   const [roomPickerOpen, setRoomPickerOpen] = useState(false)
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const supabase = createClient()
@@ -77,6 +80,14 @@ export default function ChatClient({
     return () => { supabase.removeChannel(channel) }
   }, [activeRoom])
 
+  // Dismiss active message toolbar on outside click
+  useEffect(() => {
+    if (!activeMessageId) return
+    const close = () => setActiveMessageId(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [activeMessageId])
+
   const switchRoom = async (room: string) => {
     setActiveRoom(room)
     setRoomPickerOpen(false)
@@ -107,6 +118,19 @@ export default function ChatClient({
     }
   }
 
+  const updateMessage = async (id: string, content: string) => {
+    if (!content.trim()) return
+    await supabase.from('chat_messages').update({ content: content.trim() }).eq('id', id).eq('sender_id', currentUserId)
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, content: content.trim() } : m))
+    setEditingId(null)
+  }
+
+  const deleteMessage = async (id: string) => {
+    await supabase.from('chat_messages').delete().eq('id', id).eq('sender_id', currentUserId)
+    setMessages(prev => prev.filter(m => m.id !== id))
+    setActiveMessageId(null)
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-4">
@@ -116,7 +140,7 @@ export default function ChatClient({
 
       <div className="card overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 190px)', minHeight: '460px' }}>
 
-        {/* ── Chat header — room picker (works on both mobile & desktop) ── */}
+        {/* ── Chat header — room picker ── */}
         <div
           className="px-4 py-3 flex items-center justify-between flex-shrink-0"
           style={{ borderBottom: '1px solid var(--border-soft)' }}
@@ -126,7 +150,6 @@ export default function ChatClient({
             <p className="text-xs" style={{ color: 'var(--brand)' }}>● Live</p>
           </div>
 
-          {/* Room picker — only shown if user has access to multiple rooms */}
           {rooms.length > 1 && (
             <div className="relative">
               <button
@@ -138,10 +161,7 @@ export default function ChatClient({
               {roomPickerOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setRoomPickerOpen(false)} />
-                  <div
-                    className="absolute right-0 top-9 z-20 card py-1 min-w-[160px]"
-                    style={{ boxShadow: 'var(--shadow-lg)' }}
-                  >
+                  <div className="absolute right-0 top-9 z-20 card py-1 min-w-[160px]" style={{ boxShadow: 'var(--shadow-lg)' }}>
                     {rooms.map(room => (
                       <button
                         key={room}
@@ -153,10 +173,8 @@ export default function ChatClient({
                           fontWeight: activeRoom === room ? 600 : 400,
                         }}
                       >
-                        <span
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ background: activeRoom === room ? 'var(--brand)' : 'var(--gray-300, #ccc)' }}
-                        />
+                        <span className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ background: activeRoom === room ? 'var(--brand)' : 'var(--gray-300, #ccc)' }} />
                         {room}
                       </button>
                     ))}
@@ -187,20 +205,84 @@ export default function ChatClient({
                 {!isMe && <Avatar name={sender?.full_name || 'Resident'} />}
                 <div className={clsx('max-w-[75%] sm:max-w-[65%]', isMe && 'items-end flex flex-col')}>
                   {!isMe && (
-                    <p className="text-xs font-semibold mb-1 ml-1" style={{ color: 'var(--text-secondary)' }}>{sender?.full_name}</p>
+                    <p className="text-xs font-semibold mb-1 ml-1" style={{ color: 'var(--text-secondary)' }}>
+                      {sender?.full_name}
+                    </p>
                   )}
-                  <div
-                    className="px-3.5 py-2.5 text-sm leading-relaxed break-words"
-                    style={{
-                      borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                      background: isMe ? 'var(--brand)' : 'var(--surface-3)',
-                      color: isMe ? 'white' : 'var(--text-primary)',
-                      wordBreak: 'break-word',
-                      border: isMe ? 'none' : '1px solid var(--border)',
-                    }}
-                  >
-                    {msg.content}
+
+                  {/* Message bubble with hover/tap actions for own messages */}
+                  <div className="group relative">
+                    {/* Action toolbar — hover on desktop, tap on mobile */}
+                    {isMe && editingId !== msg.id && (
+                      <div
+                        className={clsx(
+                          'absolute -top-9 right-0 flex gap-0.5 px-2 py-1 rounded-lg shadow-md z-10 transition-opacity',
+                          activeMessageId === msg.id
+                            ? 'opacity-100'
+                            : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'
+                        )}
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)' }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => { setEditingId(msg.id); setEditContent(msg.content); setActiveMessageId(null) }}
+                          className="text-xs px-2 py-1 rounded-md font-medium transition-colors"
+                          style={{ color: 'var(--text-secondary)' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand)')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                        >Edit</button>
+                        <button
+                          onClick={() => deleteMessage(msg.id)}
+                          className="text-xs px-2 py-1 rounded-md font-medium transition-colors"
+                          style={{ color: 'var(--text-secondary)' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                        >Unsend</button>
+                      </div>
+                    )}
+
+                    {editingId === msg.id ? (
+                      <div className="flex flex-col gap-1.5">
+                        <input
+                          className="input text-sm"
+                          value={editContent}
+                          onChange={e => setEditContent(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); updateMessage(msg.id, editContent) }
+                            if (e.key === 'Escape') setEditingId(null)
+                          }}
+                          autoFocus
+                        />
+                        <div className="flex gap-1.5 justify-end">
+                          <button onClick={() => setEditingId(null)} className="btn-ghost py-1 px-2 text-xs">Cancel</button>
+                          <button
+                            onClick={() => updateMessage(msg.id, editContent)}
+                            disabled={!editContent.trim()}
+                            className="btn-primary py-1 px-2 text-xs"
+                          >Save</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="px-3.5 py-2.5 text-sm leading-relaxed break-words"
+                        style={{
+                          borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                          background: isMe ? 'var(--brand)' : 'var(--surface-3)',
+                          color: isMe ? 'white' : 'var(--text-primary)',
+                          wordBreak: 'break-word',
+                          border: isMe ? 'none' : '1px solid var(--border)',
+                          cursor: isMe ? 'pointer' : 'default',
+                        }}
+                        onClick={isMe ? e => {
+                          e.stopPropagation()
+                          setActiveMessageId(prev => prev === msg.id ? null : msg.id)
+                        } : undefined}
+                      >
+                        {msg.content}
+                      </div>
+                    )}
                   </div>
+
                   <p className="text-[10px] mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>
                     {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                   </p>

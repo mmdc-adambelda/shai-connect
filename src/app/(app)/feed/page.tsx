@@ -6,15 +6,25 @@ export default async function FeedPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Fetch posts + author profiles in one query
-  const { data: rawPosts } = await supabase
+  // Fetch viewer's profile first — needed for phase filtering
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user!.id).single()
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin'
+  const userPhase = profile?.phase // e.g. "Phase 2"
+
+  // Build posts query — admins see all, residents see only their phase + "All Phases"
+  let postsQuery = supabase
     .from('posts')
     .select('*, profiles(id, full_name, unit, phase, role, avatar_url)')
     .order('created_at', { ascending: false })
     .limit(30)
 
+  if (!isAdmin && userPhase) {
+    postsQuery = postsQuery.or(`phase_tag.eq.All Phases,phase_tag.eq.${userPhase}`)
+  }
+
+  const { data: rawPosts } = await postsQuery
+
   if (!rawPosts?.length) {
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user!.id).single()
     return <FeedClient posts={[]} currentProfile={profile} currentUserId={user!.id} />
   }
 
@@ -64,8 +74,6 @@ export default async function FeedPage() {
     user_reaction: userReactionMap[p.id] ?? null,
     comment_count: commentCountMap[p.id] ?? 0,
   }))
-
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user!.id).single()
 
   return <FeedClient posts={posts} currentProfile={profile} currentUserId={user!.id} />
 }

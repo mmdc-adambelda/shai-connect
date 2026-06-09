@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
+import Link from 'next/link'
 import {
   ImagePlus, FileText, Loader2, X, Paperclip,
   MessageCircle, Share2, ChevronDown, ChevronUp, Send, MoreHorizontal, Info, Check,
+  ArrowUp, Mail, Link2, Repeat2,
 } from 'lucide-react'
 import type { Post, Profile, Comment, ReactionType } from '@/types'
 import clsx from 'clsx'
@@ -30,16 +32,265 @@ function RoleBadge({ role }: { role: string }) {
   return null
 }
 
+// ── Share Modal ──────────────────────────────────────────────────────────────
+function ShareModal({
+  post,
+  currentProfile,
+  currentUserId,
+  onClose,
+  onShareToFeed,
+}: {
+  post: Post
+  currentProfile: Profile | null
+  currentUserId: string
+  onClose: () => void
+  onShareToFeed: (content: string) => void
+}) {
+  const supabase = createClient()
+  const author = post.profiles as unknown as Profile
+  const [view, setView] = useState<'main' | 'dm'>('main')
+  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [dmSearch, setDmSearch] = useState('')
+  const [loadingProfiles, setLoadingProfiles] = useState(false)
+  const [sending, setSending] = useState<string | null>(null)
+  const [sent, setSent] = useState<string | null>(null)
+  const [chatShared, setChatShared] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const excerpt = post.content.length > 130 ? post.content.slice(0, 130) + '…' : post.content
+  const shareText = `📎 Shared from Community Feed\n"${excerpt}"\n— ${author?.full_name || 'Resident'} · ${post.phase_tag}`
+
+  const loadProfiles = async () => {
+    setLoadingProfiles(true)
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, unit, phase, role, avatar_url')
+      .neq('id', currentUserId)
+      .order('full_name')
+    setProfiles((data as Profile[]) || [])
+    setLoadingProfiles(false)
+  }
+
+  const sendDM = async (recipientId: string) => {
+    setSending(recipientId)
+    await supabase.from('direct_messages').insert({
+      sender_id: currentUserId,
+      recipient_id: recipientId,
+      content: shareText,
+    })
+    setSending(null)
+    setSent(recipientId)
+    setTimeout(() => setSent(null), 2000)
+  }
+
+  const shareToChat = async () => {
+    if (!currentProfile?.phase) return
+    await supabase.from('chat_messages').insert({
+      room: currentProfile.phase,
+      sender_id: currentUserId,
+      content: shareText,
+    })
+    setChatShared(true)
+    setTimeout(() => { setChatShared(false); onClose() }, 1500)
+  }
+
+  const copyLink = async () => {
+    const url = `${window.location.origin}/feed`
+    try { await navigator.clipboard.writeText(url) } catch {}
+    setCopied(true)
+    setTimeout(() => { setCopied(false); onClose() }, 1500)
+  }
+
+  const filtered = profiles.filter(p =>
+    p.full_name.toLowerCase().includes(dmSearch.toLowerCase())
+  )
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="card w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-soft)' }}>
+          {view === 'dm' ? (
+            <button
+              onClick={() => setView('main')}
+              className="flex items-center gap-1.5 text-sm font-semibold"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              <ChevronDown className="w-4 h-4 rotate-90" /> Send via Message
+            </button>
+          ) : (
+            <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Share Post</h2>
+          )}
+          <button onClick={onClose} className="btn-icon w-7 h-7"><X className="w-4 h-4" /></button>
+        </div>
+
+        {view === 'main' ? (
+          <div className="p-4">
+            {/* Post preview */}
+            <div
+              className="p-3 rounded-xl text-xs mb-3"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border-soft)', color: 'var(--text-secondary)' }}
+            >
+              <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{author?.full_name || 'Resident'}</span>
+              <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                style={{ background: 'var(--brand-xlight)', color: 'var(--brand)' }}>{post.phase_tag}</span>
+              <p className="mt-1.5 leading-relaxed line-clamp-2">{excerpt}</p>
+            </div>
+
+            <div className="space-y-1.5">
+              {/* Share to Feed */}
+              <button
+                onClick={() => { onShareToFeed(shareText); onClose() }}
+                className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors"
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                onMouseLeave={e => (e.currentTarget.style.background = '')}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--brand-xlight)' }}>
+                  <Repeat2 className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Share to My Feed</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Post this to your Community Feed</p>
+                </div>
+              </button>
+
+              {/* Send via DM */}
+              <button
+                onClick={() => { loadProfiles(); setView('dm') }}
+                className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors"
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                onMouseLeave={e => (e.currentTarget.style.background = '')}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--brand-xlight)' }}>
+                  <Mail className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Send via Direct Message</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Share with a specific resident</p>
+                </div>
+              </button>
+
+              {/* Share in Phase Chat */}
+              <button
+                onClick={shareToChat}
+                className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors"
+                style={{ background: chatShared ? 'var(--brand-xlight)' : '' }}
+                onMouseEnter={e => { if (!chatShared) e.currentTarget.style.background = 'var(--surface-2)' }}
+                onMouseLeave={e => { if (!chatShared) e.currentTarget.style.background = '' }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: chatShared ? 'var(--brand)' : 'var(--brand-xlight)' }}>
+                  {chatShared
+                    ? <Check className="w-4 h-4 text-white" />
+                    : <MessageCircle className="w-4 h-4" style={{ color: 'var(--brand)' }} />}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: chatShared ? 'var(--brand)' : 'var(--text-primary)' }}>
+                    {chatShared ? 'Shared!' : 'Share in Phase Chat'}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Post to {currentProfile?.phase || 'your phase'} room
+                  </p>
+                </div>
+              </button>
+
+              {/* Copy Link */}
+              <button
+                onClick={copyLink}
+                className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors"
+                style={{ background: copied ? 'var(--brand-xlight)' : '' }}
+                onMouseEnter={e => { if (!copied) e.currentTarget.style.background = 'var(--surface-2)' }}
+                onMouseLeave={e => { if (!copied) e.currentTarget.style.background = '' }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: copied ? 'var(--brand)' : 'var(--brand-xlight)' }}>
+                  {copied
+                    ? <Check className="w-4 h-4 text-white" />
+                    : <Link2 className="w-4 h-4" style={{ color: 'var(--brand)' }} />}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: copied ? 'var(--brand)' : 'var(--text-primary)' }}>
+                    {copied ? 'Link Copied!' : 'Copy Link'}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Copy the feed URL to clipboard</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* DM user picker */
+          <div className="flex flex-col" style={{ maxHeight: 380 }}>
+            <div className="px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid var(--border-soft)' }}>
+              <input
+                className="input text-sm w-full"
+                placeholder="Search residents…"
+                value={dmSearch}
+                onChange={e => setDmSearch(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {loadingProfiles && (
+                <div className="py-10 flex justify-center">
+                  <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--text-muted)' }} />
+                </div>
+              )}
+              {!loadingProfiles && filtered.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => sendDM(p.id)}
+                  disabled={!!sending}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+                  style={{ borderBottom: '1px solid var(--border-soft)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = '')}
+                >
+                  <AvatarUI name={p.full_name} avatarUrl={p.avatar_url} size={34} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{p.full_name}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{p.phase}</p>
+                  </div>
+                  {sent === p.id ? (
+                    <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--brand)' }}>
+                      <Check className="w-3.5 h-3.5" /> Sent
+                    </span>
+                  ) : sending === p.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--text-muted)' }} />
+                  ) : (
+                    <Send className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
+                  )}
+                </button>
+              ))}
+              {!loadingProfiles && filtered.length === 0 && (
+                <p className="text-sm text-center py-10" style={{ color: 'var(--text-muted)' }}>No residents found</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Reaction Bar ─────────────────────────────────────────────────────────────
 function ReactionBar({
   postId,
+  post,
   initialCounts,
   initialUserReaction,
   initialCommentCount,
+  currentProfile,
+  currentUserId,
+  onShareToFeed,
 }: {
   postId: string
+  post: Post
   initialCounts: Record<string, number>
   initialUserReaction: ReactionType | null
   initialCommentCount: number
+  currentProfile: Profile | null
+  currentUserId: string
+  onShareToFeed: (content: string) => void
 }) {
   const { counts, userReaction, total, react, loading } = useReactions(postId, {
     counts: initialCounts,
@@ -49,19 +300,8 @@ function ReactionBar({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [commentCount, setCommentCount] = useState(initialCommentCount)
-  const [shared, setShared] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const handleShare = async () => {
-    const url = `${window.location.origin}/feed`
-    if (navigator.share) {
-      try { await navigator.share({ title: 'SHAI Connect', url }) } catch {}
-    } else {
-      try { await navigator.clipboard.writeText(url) } catch {}
-      setShared(true)
-      setTimeout(() => setShared(false), 2500)
-    }
-  }
 
   const topReactions = Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
@@ -75,7 +315,6 @@ function ReactionBar({
     <>
       {(total > 0 || commentCount > 0) && (
         <div className="flex items-center justify-between mb-2 px-1">
-          {/* Reaction summary */}
           {total > 0 ? (
             <div className="flex items-center gap-1.5">
               <div className="flex -space-x-0.5">
@@ -87,7 +326,6 @@ function ReactionBar({
             </div>
           ) : <span />}
 
-          {/* Comment count — clickable to open/close */}
           {commentCount > 0 && (
             <button
               onClick={() => setShowComments(v => !v)}
@@ -130,22 +368,15 @@ function ReactionBar({
           {pickerOpen && (
             <div
               className="reaction-picker absolute bottom-full left-0 mb-2 z-20"
-              onMouseEnter={() => {
-                if (hoverTimeout.current) clearTimeout(hoverTimeout.current)
-              }}
-              onMouseLeave={() => {
-                hoverTimeout.current = setTimeout(() => setPickerOpen(false), 150)
-              }}
+              onMouseEnter={() => { if (hoverTimeout.current) clearTimeout(hoverTimeout.current) }}
+              onMouseLeave={() => { hoverTimeout.current = setTimeout(() => setPickerOpen(false), 150) }}
             >
               {REACTIONS.map((r) => (
                 <button
                   key={r.type}
                   className="reaction-emoji"
                   title={r.label}
-                  onClick={() => {
-                    react(r.type)
-                    setPickerOpen(false)
-                  }}
+                  onClick={() => { react(r.type); setPickerOpen(false) }}
                 >
                   {r.emoji}
                 </button>
@@ -164,11 +395,9 @@ function ReactionBar({
           )}
         </button>
 
-        <button onClick={handleShare} className="reaction-btn ml-auto">
-          {shared ? <Check className="w-4 h-4" style={{ color: 'var(--brand)' }} /> : <Share2 className="w-4 h-4" />}
-          <span className="hidden sm:inline" style={{ color: shared ? 'var(--brand)' : undefined }}>
-            {shared ? 'Copied!' : 'Share'}
-          </span>
+        <button onClick={() => setShowShareModal(true)} className="reaction-btn ml-auto">
+          <Share2 className="w-4 h-4" />
+          <span className="hidden sm:inline">Share</span>
         </button>
       </div>
 
@@ -178,10 +407,21 @@ function ReactionBar({
           onCommentAdded={() => setCommentCount(c => c + 1)}
         />
       )}
+
+      {showShareModal && (
+        <ShareModal
+          post={post}
+          currentProfile={currentProfile}
+          currentUserId={currentUserId}
+          onClose={() => setShowShareModal(false)}
+          onShareToFeed={onShareToFeed}
+        />
+      )}
     </>
   )
 }
 
+// ── Comments Section ─────────────────────────────────────────────────────────
 function CommentsSection({ postId, onCommentAdded }: { postId: string; onCommentAdded: () => void }) {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(false)
@@ -274,16 +514,10 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
                 />
                 <div className="flex-1 min-w-0">
                   <div className="comment-bubble">
-                    <p
-                      className="text-xs font-semibold mb-0.5"
-                      style={{ color: 'var(--text-primary)' }}
-                    >
+                    <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>
                       {author?.full_name || 'Resident'}
                     </p>
-                    <p
-                      className="text-sm"
-                      style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}
-                    >
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                       {comment.content}
                     </p>
                   </div>
@@ -294,16 +528,10 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
                     <button
                       className="text-[11px] font-semibold transition-colors"
                       style={{ color: 'var(--text-muted)' }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.color = 'var(--brand)')
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.color = 'var(--text-muted)')
-                      }
+                      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--brand)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
                       onClick={() => {
-                        setReplyingTo(
-                          replyingTo === comment.id ? null : comment.id
-                        )
+                        setReplyingTo(replyingTo === comment.id ? null : comment.id)
                         setReplyText('')
                       }}
                     >
@@ -314,17 +542,10 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
                         className="flex items-center gap-1 text-[11px] font-semibold"
                         style={{ color: 'var(--brand)' }}
                         onClick={() =>
-                          setExpandedReplies((p) => ({
-                            ...p,
-                            [comment.id]: !p[comment.id],
-                          }))
+                          setExpandedReplies((p) => ({ ...p, [comment.id]: !p[comment.id] }))
                         }
                       >
-                        {repliesOpen ? (
-                          <ChevronUp className="w-3 h-3" />
-                        ) : (
-                          <ChevronDown className="w-3 h-3" />
-                        )}
+                        {repliesOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                         {comment.replies!.length}{' '}
                         {comment.replies!.length === 1 ? 'reply' : 'replies'}
                       </button>
@@ -334,10 +555,7 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
               </div>
 
               {repliesOpen && comment.replies && (
-                <div
-                  className="ml-10 pl-3 space-y-1"
-                  style={{ borderLeft: '2px solid var(--border)' }}
-                >
+                <div className="ml-10 pl-3 space-y-1" style={{ borderLeft: '2px solid var(--border)' }}>
                   {comment.replies.map((reply) => {
                     const replyAuthor = reply.profiles as unknown as Profile
                     return (
@@ -348,30 +566,16 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
                           size={26}
                         />
                         <div className="flex-1 min-w-0">
-                          <div
-                            className="comment-bubble"
-                            style={{ borderRadius: '0 10px 10px 10px' }}
-                          >
-                            <p
-                              className="text-xs font-semibold mb-0.5"
-                              style={{ color: 'var(--text-primary)' }}
-                            >
+                          <div className="comment-bubble" style={{ borderRadius: '0 10px 10px 10px' }}>
+                            <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>
                               {replyAuthor?.full_name || 'Resident'}
                             </p>
-                            <p
-                              className="text-sm"
-                              style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}
-                            >
+                            <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                               {reply.content}
                             </p>
                           </div>
-                          <p
-                            className="text-[10px] mt-1 ml-1"
-                            style={{ color: 'var(--text-muted)' }}
-                          >
-                            {formatDistanceToNow(new Date(reply.created_at), {
-                              addSuffix: true,
-                            })}
+                          <p className="text-[10px] mt-1 ml-1" style={{ color: 'var(--text-muted)' }}>
+                            {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
                           </p>
                         </div>
                       </div>
@@ -406,11 +610,7 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
                       color: replyText.trim() ? 'white' : undefined,
                     }}
                   >
-                    {submitting ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Send className="w-3.5 h-3.5" />
-                    )}
+                    {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               )}
@@ -419,9 +619,7 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
         })}
       </div>
 
-      {submitError && (
-        <p className="text-xs text-red-500 mt-2 px-1">{submitError}</p>
-      )}
+      {submitError && <p className="text-xs text-red-500 mt-2 px-1">{submitError}</p>}
 
       <div className="flex gap-2 mt-3">
         <input
@@ -445,23 +643,24 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
             color: text.trim() ? 'white' : undefined,
           }}
         >
-          {submitting ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Send className="w-3.5 h-3.5" />
-          )}
+          {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
         </button>
       </div>
     </div>
   )
 }
 
+// ── Post Card ────────────────────────────────────────────────────────────────
 function PostCard({
   post,
   currentUserId,
+  currentProfile,
+  onShareToFeed,
 }: {
   post: Post
   currentUserId: string
+  currentProfile: Profile | null
+  onShareToFeed: (content: string) => void
 }) {
   const author = post.profiles as unknown as Profile
   const [menuOpen, setMenuOpen] = useState(false)
@@ -474,21 +673,30 @@ function PostCard({
   return (
     <div className="card animate-appear" style={{ padding: '18px 20px' }}>
       <div className="flex items-start gap-3 mb-3.5">
-        <AvatarUI
-          name={author?.full_name || 'Resident'}
-          avatarUrl={author?.avatar_url}
-          size={40}
-        />
+        {/* Author avatar — clickable to profile */}
+        <Link href={`/profile?userId=${author?.id}`} className="flex-shrink-0" onClick={e => e.stopPropagation()}>
+          <AvatarUI
+            name={author?.full_name || 'Resident'}
+            avatarUrl={author?.avatar_url}
+            size={40}
+          />
+        </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm leading-tight" style={{ color: 'var(--text-primary)' }}>
+            {/* Author name — clickable to profile */}
+            <Link
+              href={`/profile?userId=${author?.id}`}
+              className="font-semibold text-sm leading-tight hover:underline"
+              style={{ color: 'var(--text-primary)' }}
+            >
               {author?.full_name || 'Resident'}
-            </span>
+            </Link>
             <RoleBadge role={author?.role || 'resident'} />
             <span className="badge badge-gray text-[10px]">{post.phase_tag}</span>
           </div>
+          {/* Unit/block removed — only show time */}
           <p className="text-xs mt-0.5 font-medium" style={{ color: 'var(--text-muted)' }}>
-            {author?.unit} · {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+            {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
           </p>
         </div>
         <div className="relative">
@@ -498,16 +706,11 @@ function PostCard({
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div
-                className="absolute right-0 top-9 z-20 card py-1 w-36"
-                style={{ boxShadow: 'var(--shadow-lg)' }}
-              >
+              <div className="absolute right-0 top-9 z-20 card py-1 w-36" style={{ boxShadow: 'var(--shadow-lg)' }}>
                 <button
                   className="w-full text-left px-3 py-2 text-sm transition-colors"
                   style={{ color: 'var(--text-secondary)' }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = 'var(--surface-2)')
-                  }
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = '')}
                 >
                   Copy link
@@ -515,9 +718,7 @@ function PostCard({
                 {post.author_id === currentUserId && (
                   <button
                     className="w-full text-left px-3 py-2 text-sm text-red-500 transition-colors"
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = '#fee2e2')
-                    }
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#fee2e2')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = '')}
                   >
                     Delete post
@@ -537,15 +738,8 @@ function PostCard({
       </p>
 
       {post.image_url && post.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
-        <div
-          className="mb-3 overflow-hidden rounded-xl border"
-          style={{ borderColor: 'var(--border-soft)' }}
-        >
-          <img
-            src={post.image_url}
-            alt="Post attachment"
-            className="w-full object-cover max-h-80"
-          />
+        <div className="mb-3 overflow-hidden rounded-xl border" style={{ borderColor: 'var(--border-soft)' }}>
+          <img src={post.image_url} alt="Post attachment" className="w-full object-cover max-h-80" />
         </div>
       )}
 
@@ -563,26 +757,33 @@ function PostCard({
 
       <ReactionBar
         postId={post.id}
+        post={post}
         initialCounts={reactionCounts}
         initialUserReaction={post.user_reaction ?? null}
         initialCommentCount={post.comment_count ?? 0}
+        currentProfile={currentProfile}
+        currentUserId={currentUserId}
+        onShareToFeed={onShareToFeed}
       />
     </div>
   )
 }
 
+// ── Compose Modal ────────────────────────────────────────────────────────────
 function ComposeModal({
   currentProfile,
   currentUserId,
   onPost,
   onClose,
+  initialContent = '',
 }: {
   currentProfile: Profile | null
   currentUserId: string
   onPost: (post: Post) => void
   onClose: () => void
+  initialContent?: string
 }) {
-  const [content, setContent] = useState('')
+  const [content, setContent] = useState(initialContent)
   const [phaseTag, setPhaseTag] = useState('All Phases')
   const [posting, setPosting] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -594,10 +795,7 @@ function ComposeModal({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) {
-      setFileError('File too large. Max 2MB.')
-      return
-    }
+    if (file.size > 2 * 1024 * 1024) { setFileError('File too large. Max 2MB.'); return }
     setFileError('')
     setSelectedFile(file)
   }
@@ -613,63 +811,34 @@ function ComposeModal({
         .from('shai-uploads')
         .upload(path, selectedFile, { upsert: true })
       if (!upErr && up) {
-        const { data: urlData } = supabase.storage
-          .from('shai-uploads')
-          .getPublicUrl(path)
+        const { data: urlData } = supabase.storage.from('shai-uploads').getPublicUrl(path)
         image_url = urlData.publicUrl
       }
     }
     const { data, error } = await supabase
       .from('posts')
-      .insert({
-        content: content.trim(),
-        phase_tag: phaseTag,
-        author_id: currentUserId,
-        image_url,
-      })
+      .insert({ content: content.trim(), phase_tag: phaseTag, author_id: currentUserId, image_url })
       .select('*, profiles(id, full_name, unit, phase, role, avatar_url)')
       .single()
-    if (!error && data) {
-      onPost(data)
-      onClose()
-    }
+    if (!error && data) { onPost(data); onClose() }
     setPosting(false)
   }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
-        <div
-          className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: '1px solid var(--border-soft)' }}
-        >
-          <h2 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>
-            Create Post
-          </h2>
-          <button onClick={onClose} className="btn-icon w-7 h-7">
-            <X className="w-4 h-4" />
-          </button>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border-soft)' }}>
+          <h2 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>Create Post</h2>
+          <button onClick={onClose} className="btn-icon w-7 h-7"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
           <div className="flex gap-3 mb-4">
-            <AvatarUI
-              name={currentProfile?.full_name || 'Me'}
-              avatarUrl={currentProfile?.avatar_url}
-              size={42}
-            />
+            <AvatarUI name={currentProfile?.full_name || 'Me'} avatarUrl={currentProfile?.avatar_url} size={42} />
             <div>
-              <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-                {currentProfile?.full_name}
-              </p>
-              <select
-                className="input py-1 text-xs mt-1 w-auto"
-                value={phaseTag}
-                onChange={(e) => setPhaseTag(e.target.value)}
-              >
-                {PHASES.map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
+              <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{currentProfile?.full_name}</p>
+              <select className="input py-1 text-xs mt-1 w-auto" value={phaseTag} onChange={(e) => setPhaseTag(e.target.value)}>
+                {PHASES.map((p) => <option key={p}>{p}</option>)}
               </select>
             </div>
           </div>
@@ -677,40 +846,26 @@ function ComposeModal({
           <textarea
             className="w-full resize-none text-sm leading-relaxed outline-none bg-transparent"
             style={{ color: 'var(--text-primary)', minHeight: 120 }}
-            placeholder={`What's on your mind, ${
-              currentProfile?.full_name?.split(' ')[0] || 'neighbor'
-            }?`}
+            placeholder={`What's on your mind, ${currentProfile?.full_name?.split(' ')[0] || 'neighbor'}?`}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             autoFocus
           />
 
           {selectedFile && (
-            <div
-              className="mt-2 flex items-center gap-2 text-xs p-2.5 rounded-lg"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-            >
+            <div className="mt-2 flex items-center gap-2 text-xs p-2.5 rounded-lg"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
               <Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="truncate">{selectedFile.name}</span>
-              <button
-                onClick={() => setSelectedFile(null)}
-                className="ml-auto btn-icon w-5 h-5 flex-shrink-0"
-              >
+              <button onClick={() => setSelectedFile(null)} className="ml-auto btn-icon w-5 h-5 flex-shrink-0">
                 <X className="w-3 h-3" />
               </button>
             </div>
           )}
 
-          {/* Caption required hint — shows when file attached but no text entered */}
           {selectedFile && !content.trim() && (
-            <div
-              className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs font-medium"
-              style={{
-                background: '#FEF9EC',
-                border: '1px solid #F3D77A',
-                color: '#854D0E',
-              }}
-            >
+            <div className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs font-medium"
+              style={{ background: '#FEF9EC', border: '1px solid #F3D77A', color: '#854D0E' }}>
               <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: '#D97706' }} />
               <span>A caption is required when sharing a photo or file. Write something above to enable posting.</span>
             </div>
@@ -718,49 +873,18 @@ function ComposeModal({
 
           {fileError && <p className="text-xs text-red-500 mt-1">{fileError}</p>}
 
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx,.txt"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
+          <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+          <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt" className="hidden" onChange={handleFileSelect} />
         </div>
 
-        <div
-          className="px-5 py-4 flex items-center justify-between"
-          style={{ borderTop: '1px solid var(--border-soft)' }}
-        >
+        <div className="px-5 py-4 flex items-center justify-between" style={{ borderTop: '1px solid var(--border-soft)' }}>
           <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => {
-                if (photoInputRef.current) {
-                  photoInputRef.current.value = ''
-                  photoInputRef.current.click()
-                }
-              }}
-              className="btn-ghost py-2 px-3 text-xs gap-1.5"
-            >
+            <button type="button" onClick={() => { if (photoInputRef.current) { photoInputRef.current.value = ''; photoInputRef.current.click() } }}
+              className="btn-ghost py-2 px-3 text-xs gap-1.5">
               <ImagePlus className="w-4 h-4" /> Photo
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (fileInputRef.current) {
-                  fileInputRef.current.value = ''
-                  fileInputRef.current.click()
-                }
-              }}
-              className="btn-ghost py-2 px-3 text-xs gap-1.5"
-            >
+            <button type="button" onClick={() => { if (fileInputRef.current) { fileInputRef.current.value = ''; fileInputRef.current.click() } }}
+              className="btn-ghost py-2 px-3 text-xs gap-1.5">
               <FileText className="w-4 h-4" /> File
             </button>
           </div>
@@ -779,6 +903,7 @@ function ComposeModal({
   )
 }
 
+// ── Feed Client (root) ───────────────────────────────────────────────────────
 export default function FeedClient({
   posts: initial,
   currentProfile,
@@ -790,49 +915,56 @@ export default function FeedClient({
 }) {
   const [posts, setPosts] = useState(initial)
   const [showCompose, setShowCompose] = useState(false)
+  const [composeQuote, setComposeQuote] = useState('')
+  const [showBackToTop, setShowBackToTop] = useState(false)
+
+  // Track scroll of the app's main element for back-to-top button (mobile only)
+  useEffect(() => {
+    const main = document.querySelector('main')
+    if (!main) return
+    const onScroll = () => setShowBackToTop(main.scrollTop > 400)
+    main.addEventListener('scroll', onScroll, { passive: true })
+    return () => main.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const scrollToTop = () => {
+    document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleShareToFeed = (quote: string) => {
+    setComposeQuote(quote)
+    setShowCompose(true)
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1
-            className="font-display text-2xl font-bold"
-            style={{ color: 'var(--text-primary)' }}
-          >
+          <h1 className="font-display text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
             Community Feed
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
             Share updates with your neighbors
           </p>
         </div>
-        <button onClick={() => setShowCompose(true)} className="btn-primary">
+        <button onClick={() => { setComposeQuote(''); setShowCompose(true) }} className="btn-primary">
           <span className="text-base leading-none">+</span> New Post
         </button>
       </div>
 
       <div
         className="card p-3.5 mb-5 flex gap-3 items-center cursor-pointer transition-all"
-        onClick={() => setShowCompose(true)}
+        onClick={() => { setComposeQuote(''); setShowCompose(true) }}
         style={{ borderRadius: 'var(--radius-lg)' }}
         onMouseEnter={e => (e.currentTarget.style.boxShadow = 'var(--shadow-md)')}
         onMouseLeave={e => (e.currentTarget.style.boxShadow = 'var(--shadow-sm)')}
       >
-        <AvatarUI
-          name={currentProfile?.full_name || 'Me'}
-          avatarUrl={currentProfile?.avatar_url}
-          size={38}
-        />
+        <AvatarUI name={currentProfile?.full_name || 'Me'} avatarUrl={currentProfile?.avatar_url} size={38} />
         <div
           className="flex-1 px-4 py-2.5 text-sm rounded-full border transition-colors font-medium"
-          style={{
-            background: 'var(--surface-2)',
-            color: 'var(--text-muted)',
-            border: '1px solid var(--border)',
-            cursor: 'text',
-          }}
+          style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border)', cursor: 'text' }}
         >
-          What&apos;s on your mind,{' '}
-          {currentProfile?.full_name?.split(' ')[0] || 'neighbor'}?
+          What&apos;s on your mind, {currentProfile?.full_name?.split(' ')[0] || 'neighbor'}?
         </div>
       </div>
 
@@ -840,25 +972,42 @@ export default function FeedClient({
         {posts.length === 0 && (
           <div className="card p-14 text-center">
             <p className="text-4xl mb-4">🌿</p>
-            <p className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-              No posts yet
-            </p>
+            <p className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No posts yet</p>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               Be the first to share something with the community!
             </p>
           </div>
         )}
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} currentUserId={currentUserId} />
+          <PostCard
+            key={post.id}
+            post={post}
+            currentUserId={currentUserId}
+            currentProfile={currentProfile}
+            onShareToFeed={handleShareToFeed}
+          />
         ))}
       </div>
+
+      {/* Back-to-top button — mobile only, appears after scrolling 400px */}
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="md:hidden fixed bottom-24 right-4 z-30 w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all"
+          style={{ background: 'var(--brand)', color: 'white' }}
+          aria-label="Back to top"
+        >
+          <ArrowUp className="w-5 h-5" />
+        </button>
+      )}
 
       {showCompose && (
         <ComposeModal
           currentProfile={currentProfile}
           currentUserId={currentUserId}
           onPost={(p) => setPosts([p, ...posts])}
-          onClose={() => setShowCompose(false)}
+          onClose={() => { setShowCompose(false); setComposeQuote('') }}
+          initialContent={composeQuote}
         />
       )}
     </div>
