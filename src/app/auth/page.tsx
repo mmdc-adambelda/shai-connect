@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Leaf, Loader2, Eye, EyeOff, AlertCircle, Lock } from 'lucide-react'
+import { Loader2, Eye, EyeOff, AlertCircle, Lock } from 'lucide-react'
+import Image from 'next/image'
 
 const PHASES = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
 
@@ -177,15 +178,14 @@ export default function AuthPage() {
 
         {/* Logo */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style={{ background: 'var(--brand)' }}>
-            <Leaf className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="font-display text-3xl font-bold" style={{ color: 'var(--brand)' }}>
-            SHAI Connect
-          </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Sabella Homeowners Association Inc.
-          </p>
+          <Image
+            src="/logo.png"
+            alt="SHAI Connect"
+            width={160}
+            height={160}
+            className="mx-auto mb-1"
+            priority
+          />
         </div>
 
         <div className="card p-6">
