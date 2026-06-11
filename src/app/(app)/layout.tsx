@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import Topbar from '@/components/layout/Topbar'
 import BottomNav from '@/components/layout/BottomNav'
+import FAB from '@/components/ui/FAB'
 import type { Profile } from '@/types'
 
 const IDLE_TIMEOUT_MS  = 2 * 60 * 60 * 1000  // 2 hours
@@ -81,7 +82,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      <BottomNav />
+      <BottomNav userId={profile?.id} />
+      <FAB />
 
       {/* Idle warning banner */}
       {showIdleWarning && (

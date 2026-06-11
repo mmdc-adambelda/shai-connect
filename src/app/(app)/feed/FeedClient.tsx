@@ -938,6 +938,13 @@ export default function FeedClient({
     return () => main.removeEventListener('scroll', onScroll)
   }, [])
 
+  // FAB button → open compose modal
+  useEffect(() => {
+    const handler = () => { setComposeQuote(''); setShowCompose(true) }
+    window.addEventListener('shai:fab', handler)
+    return () => window.removeEventListener('shai:fab', handler)
+  }, [])
+
   const scrollToTop = () => {
     document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -1045,7 +1052,7 @@ export default function FeedClient({
         <button
           onClick={scrollToTop}
           className="md:hidden fixed right-4 z-30 w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all"
-          style={{ background: 'var(--brand)', color: 'white', bottom: 'calc(56px + env(safe-area-inset-bottom) + 12px)' }}
+          style={{ background: 'var(--brand)', color: 'white', bottom: 'calc(56px + env(safe-area-inset-bottom) + 80px)' }}
           aria-label="Back to top"
         >
           <ArrowUp className="w-5 h-5" />

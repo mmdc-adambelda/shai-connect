@@ -1,0 +1,27 @@
+{
+  "name": "SHAI Connect",
+  "short_name": "SHAI Connect",
+  "description": "Community Digital Platform for Sabella Homeowners Association Inc.",
+  "start_url": "/feed",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F7F9F8",
+  "theme_color": "#1F5D42",
+  "orientation": "portrait-primary",
+  "categories": ["social", "utilities"],
+  "lang": "en-PH",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -96,6 +96,13 @@ export default function MessagesClient({
     return () => { supabase.removeChannel(channel) }
   }, [activeUserId])
 
+  // FAB button → open new DM modal
+  useEffect(() => {
+    const handler = () => setShowNewDM(true)
+    window.addEventListener('shai:fab', handler)
+    return () => window.removeEventListener('shai:fab', handler)
+  }, [])
+
   // Dismiss active message toolbar on outside click
   useEffect(() => {
     if (!activeMessageId) return
@@ -202,7 +209,7 @@ export default function MessagesClient({
         </div>
       )}
 
-      <div className="card flex overflow-hidden" style={{ height: 'calc(100vh - 200px)', minHeight: '460px' }}>
+      <div className="card flex overflow-hidden chat-panel">
 
         {/* ── Conversation list ── */}
         <div className={clsx(

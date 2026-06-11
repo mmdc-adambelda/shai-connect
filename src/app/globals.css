@@ -397,6 +397,18 @@
     }
   }
 
+  /* Chat panel height — desktop vs mobile (accounts for bottom nav on mobile) */
+  .chat-panel {
+    height: calc(100svh - 190px);
+    min-height: 460px;
+  }
+  @media (max-width: 767px) {
+    .chat-panel {
+      height: calc(100svh - 56px - 190px);
+      min-height: 0;
+    }
+  }
+
   /* Text overflow */
   .break-words { word-break: break-word; overflow-wrap: anywhere; }
 

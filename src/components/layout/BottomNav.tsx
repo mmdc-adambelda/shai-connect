@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Newspaper, Megaphone, MessageSquare, Mail, User } from 'lucide-react'
+import { useUnreadDMs } from '@/hooks/useUnreadDMs'
 
 const ITEMS = [
   { href: '/feed',          icon: Newspaper,    label: 'Feed'     },
@@ -12,8 +13,9 @@ const ITEMS = [
   { href: '/profile',       icon: User,         label: 'Profile'  },
 ]
 
-export default function BottomNav() {
-  const pathname = usePathname()
+export default function BottomNav({ userId }: { userId?: string | null }) {
+  const pathname  = usePathname()
+  const unreadDMs = useUnreadDMs(userId)
 
   return (
     <nav
@@ -26,7 +28,8 @@ export default function BottomNav() {
       }}
     >
       {ITEMS.map(({ href, icon: Icon, label }) => {
-        const active = pathname === href || pathname.startsWith(href + '/')
+        const active  = pathname === href || pathname.startsWith(href + '/')
+        const showBadge = href === '/messages' && unreadDMs > 0
         return (
           <Link
             key={href}
@@ -40,7 +43,17 @@ export default function BottomNav() {
                 style={{ background: 'var(--brand)' }}
               />
             )}
-            <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 1.8} />
+            <span className="relative">
+              <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 1.8} />
+              {showBadge && (
+                <span
+                  className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                  style={{ background: '#EF4444' }}
+                >
+                  {unreadDMs > 9 ? '9+' : unreadDMs}
+                </span>
+              )}
+            </span>
             <span
               className="text-[10px] leading-none font-semibold"
               style={{ fontWeight: active ? 700 : 500 }}

@@ -138,7 +138,7 @@ export default function ChatClient({
         <p className="text-sm font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>Real-time conversations with your neighbors</p>
       </div>
 
-      <div className="card overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 190px)', minHeight: '460px' }}>
+      <div className="card overflow-hidden flex flex-col chat-panel">
 
         {/* ── Chat header — room picker ── */}
         <div
