@@ -179,7 +179,7 @@ export default function AuthPage() {
         {/* Logo */}
         <div className="text-center mb-6">
           <Image
-            src="/logo.png"
+            src="/logo1.png"
             alt="SHAI Connect"
             width={160}
             height={160}

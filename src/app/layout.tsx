@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/components/ui/ThemeProvider'
 export const metadata: Metadata = {
   title: 'SHAI Connect',
   description: 'Community Digital Platform for Sabella Homeowners Association Inc.',
-  icons: { icon: '/logo.png', apple: '/logo.png' },
+  icons: { icon: '/logo1.png', apple: '/logo1.png' },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

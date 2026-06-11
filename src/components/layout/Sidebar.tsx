@@ -74,7 +74,7 @@ export default function Sidebar({ open, onClose, profile }: SidebarProps) {
       <div className="px-2 mb-5 flex items-center justify-between">
         <Link href="/feed" className="flex items-center gap-3 group" onClick={onClose}>
           <Image
-            src="/logo.png"
+            src="/logo1.png"
             alt="SHAI Connect"
             width={34}
             height={34}
