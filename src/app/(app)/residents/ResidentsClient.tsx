@@ -24,19 +24,23 @@ function ResidentAvatar({ resident }: { resident: Profile }) {
       <img
         src={resident.avatar_url}
         alt={resident.full_name}
-        className="w-14 h-14 rounded-full object-cover mx-auto mb-3 border-2 border-white shadow-sm"
+        className="w-16 h-16 rounded-full object-cover mx-auto mb-3"
+        style={{ boxShadow: '0 0 0 2px white, 0 0 0 3px var(--border)' }}
       />
     )
   }
+  const style =
+    resident.role === 'admin' || resident.role === 'superadmin'
+      ? { background: '#fee2e2', color: '#991b1b' }
+      : resident.role === 'moderator'
+        ? { background: '#dbeafe', color: '#1e40af' }
+        : { background: 'var(--brand-xlight)', color: 'var(--brand)' }
+
   return (
-    <div className={clsx(
-      'w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl mx-auto mb-3 border-2',
-      resident.role === 'admin'
-        ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700'
-        : resident.role === 'moderator'
-          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700'
-          : 'bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-400 border-brand-200 dark:border-brand-800'
-    )}>
+    <div
+      className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl mx-auto mb-3"
+      style={style}
+    >
       {initials(resident.full_name)}
     </div>
   )
@@ -129,41 +133,65 @@ export default function ResidentsClient({
           return (
             <div
               key={resident.id}
-              className="card p-4 text-center hover:border-brand-200 dark:hover:border-brand-800 transition-colors flex flex-col"
+              className="card p-4 text-center flex flex-col transition-shadow hover:shadow-md"
             >
               {/* Avatar */}
               <ResidentAvatar resident={resident} />
 
-              <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{resident.full_name}</p>
-              <p className="text-xs text-gray-400 truncate mt-0.5">{resident.unit}</p>
+              <p className="font-bold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{resident.full_name}</p>
+              <p className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{resident.phase}</p>
               <div className="mt-2">
-                <span className={`badge ${roleBadgeClass(resident.role)} text-[10px]`}>
-                  {resident.role.charAt(0).toUpperCase() + resident.role.slice(1)}
-                </span>
+                {(resident.role !== 'resident') && (
+                  <span className={`badge ${roleBadgeClass(resident.role)} text-[10px]`}>
+                    {resident.role.charAt(0).toUpperCase() + resident.role.slice(1)}
+                  </span>
+                )}
               </div>
-              <p className="text-[10px] text-gray-400 mt-1 truncate">{resident.phase}</p>
 
               {/* Spacer pushes buttons to bottom */}
               <div className="flex-1" />
 
-              {/* View Profile — always visible */}
+              {/* View Profile */}
               <Link
                 href={`/profile?userId=${resident.id}`}
-                className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-colors border bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--surface-2)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--surface-3)' }}
               >
-                <User className="w-3.5 h-3.5" /> View Profile
+                <User className="w-3.5 h-3.5" /> Profile
               </Link>
 
               {/* Follow / Following */}
               <button
                 onClick={() => toggleFollow(resident.id)}
                 disabled={isLoading}
-                className={clsx(
-                  'mt-1.5 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-colors border disabled:opacity-50',
-                  isFollowing
-                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-200'
-                    : 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 border-brand-200 dark:border-brand-800 hover:bg-brand-600 hover:text-white hover:border-brand-600'
-                )}
+                className="mt-1.5 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                style={isFollowing
+                  ? { background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }
+                  : { background: 'var(--brand-xlight)', color: 'var(--brand)', border: '1px solid var(--brand-light)' }
+                }
+                onMouseEnter={e => {
+                  if (isFollowing) {
+                    e.currentTarget.style.background = '#fee2e2'
+                    e.currentTarget.style.color = '#991b1b'
+                    e.currentTarget.style.borderColor = '#fecaca'
+                  } else {
+                    e.currentTarget.style.background = 'var(--brand)'
+                    e.currentTarget.style.color = 'white'
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (isFollowing) {
+                    e.currentTarget.style.background = 'var(--surface-3)'
+                    e.currentTarget.style.color = 'var(--text-secondary)'
+                    e.currentTarget.style.borderColor = 'var(--border)'
+                  } else {
+                    e.currentTarget.style.background = 'var(--brand-xlight)'
+                    e.currentTarget.style.color = 'var(--brand)'
+                    e.currentTarget.style.borderColor = 'var(--brand-light)'
+                  }
+                }}
               >
                 {isFollowing
                   ? <><UserCheck className="w-3.5 h-3.5" /> Following</>

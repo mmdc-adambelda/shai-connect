@@ -1,6 +1,7 @@
 'use client'
 
-import { Bell, Sun, Moon, LogOut, X, MessageSquare, Search, Menu, Mail, LifeBuoy } from 'lucide-react'
+import { Bell, Sun, Moon, LogOut, X, Search, Menu } from 'lucide-react'
+import { MessageSquare, Mail } from 'lucide-react'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
@@ -160,31 +161,32 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
         <Search className="w-[18px] h-[18px]" />
       </button>
 
-      {/* Quick-nav icons: Phase Chat · Messages · Ticket */}
-      {[
-        { href: '/chat',     icon: MessageSquare, title: 'Phase Chats'     },
-        { href: '/messages', icon: Mail,          title: 'Messages'        },
-        { href: '/tickets',  icon: LifeBuoy,      title: 'Submit a Ticket' },
-      ].map(({ href, icon: Icon, title }) => {
-        const active = pathname === href || pathname.startsWith(href + '/')
-        return (
-          <Link
-            key={href}
-            href={href}
-            className="btn-icon relative"
-            title={title}
-            style={active ? { color: 'var(--brand)', background: 'var(--brand-xlight)' } : undefined}
-          >
-            <Icon className="w-[18px] h-[18px]" />
-            {active && (
-              <span
-                className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
-                style={{ background: 'var(--brand)' }}
-              />
-            )}
-          </Link>
-        )
-      })}
+      {/* Quick-nav: Chat + Messages — desktop only (mobile uses bottom nav) */}
+      <div className="hidden md:flex items-center">
+        {[
+          { href: '/chat',     icon: MessageSquare, title: 'Phase Chat' },
+          { href: '/messages', icon: Mail,          title: 'Messages'   },
+        ].map(({ href, icon: Icon, title }) => {
+          const active = pathname === href || pathname.startsWith(href + '/')
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="btn-icon relative"
+              title={title}
+              style={active ? { color: 'var(--brand)', background: 'var(--brand-xlight)' } : undefined}
+            >
+              <Icon className="w-[18px] h-[18px]" />
+              {active && (
+                <span
+                  className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                  style={{ background: 'var(--brand)' }}
+                />
+              )}
+            </Link>
+          )
+        })}
+      </div>
 
       {/* Theme toggle */}
       <button onClick={toggle} className="btn-icon" title="Toggle theme">

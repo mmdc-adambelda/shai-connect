@@ -243,54 +243,73 @@ export default function AnnouncementsClient({
         {announcements.map(a => (
           <div
             key={a.id}
-            className={`card p-5 ${a.pinned ? 'border-l-4 border-l-yellow-400' : ''}`}
+            className="card overflow-hidden"
+            style={a.pinned ? { borderLeft: '3px solid var(--accent)' } : {}}
           >
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              {a.pinned && (
-                <span className="flex items-center gap-1 badge badge-yellow">
-                  <Pin className="w-3 h-3" /> Pinned
-                </span>
-              )}
-              <span className={`badge ${catBadge[a.category] || 'badge-gray'}`}>{a.category}</span>
-            </div>
-
-            <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-1">{a.title}</h2>
-            <p className="text-xs text-gray-400 mb-3">
-              🛡️ HOA Admin · {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
-            </p>
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{a.body}</p>
-
-            {/* Attached photo */}
-            {(a as Announcement & { image_url?: string | null }).image_url && (
+            {/* Pinned banner */}
+            {a.pinned && (
               <div
-                className="mt-3 rounded-xl overflow-hidden border cursor-zoom-in relative group"
-                style={{ borderColor: 'var(--border-soft)' }}
-                onClick={() => setLightboxUrl((a as Announcement & { image_url?: string | null }).image_url!)}
+                className="flex items-center gap-2 px-5 py-2"
+                style={{ background: 'var(--accent-light)', borderBottom: '1px solid #e8d47a' }}
               >
-                <img
-                  src={(a as Announcement & { image_url?: string | null }).image_url!}
-                  alt="Announcement photo"
-                  className="w-full object-cover max-h-72"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                  <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-80 transition-opacity" />
-                </div>
+                <Pin className="w-3 h-3 flex-shrink-0" style={{ color: '#8a6b1a' }} />
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8a6b1a' }}>
+                  Pinned Announcement
+                </span>
               </div>
             )}
 
-            <div className="flex gap-2 mt-4 pt-3" style={{ borderTop: '1px solid var(--border-soft)' }}>
-              <button className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-gray-500 hover:bg-green-50 hover:text-green-700 transition-colors">
-                <CheckCircle className="w-3.5 h-3.5" /> Acknowledge
-              </button>
+            <div className="p-5">
+              <div className="flex items-center gap-2 flex-wrap mb-2.5">
+                <span className={`badge ${catBadge[a.category] || 'badge-gray'}`}>{a.category}</span>
+              </div>
+
+              <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-1.5">{a.title}</h2>
+              <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+                🛡️ HOA Admin · {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
+              </p>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{a.body}</p>
+
+              {/* Attached photo */}
               {(a as Announcement & { image_url?: string | null }).image_url && (
-                <a
-                  href={(a as Announcement & { image_url?: string | null }).image_url!}
-                  target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                <div
+                  className="mt-4 overflow-hidden border cursor-zoom-in relative group rounded-xl"
+                  style={{ borderColor: 'var(--border-soft)' }}
+                  onClick={() => setLightboxUrl((a as Announcement & { image_url?: string | null }).image_url!)}
                 >
-                  <Download className="w-3.5 h-3.5" /> Download Photo
-                </a>
+                  <img
+                    src={(a as Announcement & { image_url?: string | null }).image_url!}
+                    alt="Announcement photo"
+                    className="w-full object-cover max-h-72"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                    <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-80 transition-opacity" />
+                  </div>
+                </div>
               )}
+
+              <div className="flex gap-2 mt-4 pt-3" style={{ borderTop: '1px solid var(--border-soft)' }}>
+                <button
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#dcfce7'; e.currentTarget.style.color = '#166534' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--text-muted)' }}
+                >
+                  <CheckCircle className="w-3.5 h-3.5" /> Acknowledge
+                </button>
+                {(a as Announcement & { image_url?: string | null }).image_url && (
+                  <a
+                    href={(a as Announcement & { image_url?: string | null }).image_url!}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--surface-3)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = '' }}
+                  >
+                    <Download className="w-3.5 h-3.5" /> Download
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         ))}

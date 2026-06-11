@@ -7,21 +7,28 @@ import {
   Newspaper, Megaphone,
   Users, User, ShieldCheck, Video, X,
   Rss, FileText, BarChart3, LogOut, Phone,
+  MessageSquare, Mail, LifeBuoy,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 
-const navItems = [
-  { label: 'Feed',              href: '/feed',              icon: Newspaper,  badge: null },
-  { label: 'Announcements',    href: '/announcements',     icon: Megaphone,  badge: null },
-  { label: 'Community Updates',href: '/community-updates', icon: Rss,        badge: null },
-  { label: 'Board Resolutions',href: '/board-resolutions', icon: FileText,   badge: null },
-  { label: 'Financial Reports',href: '/financial-reports', icon: BarChart3,  badge: null },
-  { label: 'Residents',        href: '/residents',         icon: Users,      badge: null },
-  { label: 'General Assembly', href: '/general-assembly',  icon: Video,      badge: null },
-  { label: 'Important Contacts', href: '/contacts',         icon: Phone,      badge: null },
+const communityItems = [
+  { label: 'Feed',               href: '/feed',              icon: Newspaper  },
+  { label: 'Announcements',      href: '/announcements',     icon: Megaphone  },
+  { label: 'Community Updates',  href: '/community-updates', icon: Rss        },
+  { label: 'Board Resolutions',  href: '/board-resolutions', icon: FileText   },
+  { label: 'Financial Reports',  href: '/financial-reports', icon: BarChart3  },
+  { label: 'Residents',          href: '/residents',         icon: Users      },
+  { label: 'General Assembly',   href: '/general-assembly',  icon: Video      },
+  { label: 'Important Contacts', href: '/contacts',          icon: Phone      },
+]
+
+const communicateItems = [
+  { label: 'Phase Chat',     href: '/chat',     icon: MessageSquare },
+  { label: 'Messages',       href: '/messages', icon: Mail          },
+  { label: 'Support',        href: '/tickets',  icon: LifeBuoy      },
 ]
 
 interface SidebarProps {
@@ -91,22 +98,33 @@ export default function Sidebar({ open, onClose, profile }: SidebarProps) {
         </button>
       </div>
 
-      {/* Main nav */}
+      {/* Community nav */}
       <div className="mb-1">
         <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-          Navigation
+          Community
         </p>
-        {navItems.map(({ label, href, icon: Icon, badge }) => {
+        {communityItems.map(({ label, href, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link key={href} href={href} className={clsx('nav-link', active && 'active')}>
               <Icon className="w-[15px] h-[15px] flex-shrink-0" />
               <span className="flex-1 text-sm">{label}</span>
-              {badge !== null && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: 'var(--brand)' }}>
-                  {badge}
-                </span>
-              )}
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Communicate nav */}
+      <div className="mb-1">
+        <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+          Communicate
+        </p>
+        {communicateItems.map(({ label, href, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(href + '/')
+          return (
+            <Link key={href} href={href} className={clsx('nav-link', active && 'active')}>
+              <Icon className="w-[15px] h-[15px] flex-shrink-0" />
+              <span className="flex-1 text-sm">{label}</span>
             </Link>
           )
         })}

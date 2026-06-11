@@ -671,33 +671,40 @@ function PostCard({
   }
 
   return (
-    <div className="card animate-appear" style={{ padding: '18px 20px' }}>
-      <div className="flex items-start gap-3 mb-3.5">
+    <div className="card animate-appear overflow-hidden">
+      <div className="flex items-start gap-3" style={{ padding: '16px 18px 12px' }}>
         {/* Author avatar — clickable to profile */}
         <Link href={`/profile?userId=${author?.id}`} className="flex-shrink-0" onClick={e => e.stopPropagation()}>
           <AvatarUI
             name={author?.full_name || 'Resident'}
             avatarUrl={author?.avatar_url}
-            size={40}
+            size={42}
           />
         </Link>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
             {/* Author name — clickable to profile */}
             <Link
               href={`/profile?userId=${author?.id}`}
-              className="font-semibold text-sm leading-tight hover:underline"
+              className="font-bold text-sm leading-tight hover:underline"
               style={{ color: 'var(--text-primary)' }}
             >
               {author?.full_name || 'Resident'}
             </Link>
             <RoleBadge role={author?.role || 'resident'} />
-            <span className="badge badge-gray text-[10px]">{post.phase_tag}</span>
           </div>
-          {/* Unit/block removed — only show time */}
-          <p className="text-xs mt-0.5 font-medium" style={{ color: 'var(--text-muted)' }}>
-            {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-          </p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+              {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+            </p>
+            <span className="text-xs" style={{ color: 'var(--border)' }}>·</span>
+            <span
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ background: 'var(--brand-xlight)', color: 'var(--brand)' }}
+            >
+              {post.phase_tag}
+            </span>
+          </div>
         </div>
         <div className="relative">
           <button className="btn-icon w-8 h-8" onClick={() => setMenuOpen((v) => !v)}>
@@ -731,40 +738,44 @@ function PostCard({
       </div>
 
       <p
-        className="text-sm leading-relaxed whitespace-pre-wrap mb-4"
-        style={{ color: 'var(--text-primary)', lineHeight: '1.65' }}
+        className="text-sm leading-relaxed whitespace-pre-wrap"
+        style={{ color: 'var(--text-primary)', lineHeight: '1.7', padding: '0 18px 14px' }}
       >
         {post.content}
       </p>
 
       {post.image_url && post.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
-        <div className="mb-3 overflow-hidden rounded-xl border" style={{ borderColor: 'var(--border-soft)' }}>
-          <img src={post.image_url} alt="Post attachment" className="w-full object-cover max-h-80" />
+        <div className="mb-0 overflow-hidden border-y" style={{ borderColor: 'var(--border-soft)' }}>
+          <img src={post.image_url} alt="Post attachment" className="w-full object-cover max-h-96" />
         </div>
       )}
 
       {post.image_url && !post.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
-        <div
-          onClick={() => window.open(post.image_url!, '_blank', 'noopener,noreferrer')}
-          className="mb-3 flex items-center gap-2 p-3 rounded-xl text-sm font-medium transition-colors cursor-pointer"
-          style={{ background: 'var(--brand-xlight)', color: 'var(--brand)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-light)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-xlight)')}
-        >
-          <Paperclip className="w-4 h-4" /> View attachment
+        <div style={{ padding: '0 18px 14px' }}>
+          <div
+            onClick={() => window.open(post.image_url!, '_blank', 'noopener,noreferrer')}
+            className="flex items-center gap-2 p-3 rounded-xl text-sm font-medium transition-colors cursor-pointer"
+            style={{ background: 'var(--brand-xlight)', color: 'var(--brand)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-light)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-xlight)')}
+          >
+            <Paperclip className="w-4 h-4" /> View attachment
+          </div>
         </div>
       )}
 
-      <ReactionBar
-        postId={post.id}
-        post={post}
-        initialCounts={reactionCounts}
-        initialUserReaction={post.user_reaction ?? null}
-        initialCommentCount={post.comment_count ?? 0}
-        currentProfile={currentProfile}
-        currentUserId={currentUserId}
-        onShareToFeed={onShareToFeed}
-      />
+      <div style={{ padding: '0 18px 4px' }}>
+        <ReactionBar
+          postId={post.id}
+          post={post}
+          initialCounts={reactionCounts}
+          initialUserReaction={post.user_reaction ?? null}
+          initialCommentCount={post.comment_count ?? 0}
+          currentProfile={currentProfile}
+          currentUserId={currentUserId}
+          onShareToFeed={onShareToFeed}
+        />
+      </div>
     </div>
   )
 }
@@ -953,18 +964,58 @@ export default function FeedClient({
       </div>
 
       <div
-        className="card p-3.5 mb-5 flex gap-3 items-center cursor-pointer transition-all"
-        onClick={() => { setComposeQuote(''); setShowCompose(true) }}
-        style={{ borderRadius: 'var(--radius-lg)' }}
-        onMouseEnter={e => (e.currentTarget.style.boxShadow = 'var(--shadow-md)')}
-        onMouseLeave={e => (e.currentTarget.style.boxShadow = 'var(--shadow-sm)')}
+        className="card mb-5"
+        style={{ borderRadius: 'var(--radius-lg)', padding: '14px 16px' }}
       >
-        <AvatarUI name={currentProfile?.full_name || 'Me'} avatarUrl={currentProfile?.avatar_url} size={38} />
+        {/* What's on your mind */}
         <div
-          className="flex-1 px-4 py-2.5 text-sm rounded-full border transition-colors font-medium"
-          style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border)', cursor: 'text' }}
+          className="flex gap-3 items-center cursor-pointer mb-3"
+          onClick={() => { setComposeQuote(''); setShowCompose(true) }}
         >
-          What&apos;s on your mind, {currentProfile?.full_name?.split(' ')[0] || 'neighbor'}?
+          <AvatarUI name={currentProfile?.full_name || 'Me'} avatarUrl={currentProfile?.avatar_url} size={38} />
+          <div
+            className="flex-1 px-4 py-2.5 text-sm rounded-full transition-colors font-medium"
+            style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1.5px solid var(--border)', cursor: 'text' }}
+          >
+            What&apos;s on your mind, {currentProfile?.full_name?.split(' ')[0] || 'neighbor'}?
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="divider" />
+
+        {/* Quick-action buttons */}
+        <div className="flex items-center gap-1 mt-2.5 -mx-1">
+          <button
+            onClick={() => { setComposeQuote(''); setShowCompose(true) }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+            onMouseLeave={e => (e.currentTarget.style.background = '')}
+          >
+            <ImagePlus className="w-4 h-4 flex-shrink-0" style={{ color: '#16a34a' }} />
+            <span className="hidden xs:inline">Photo</span>
+          </button>
+          <button
+            onClick={() => { setComposeQuote(''); setShowCompose(true) }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+            onMouseLeave={e => (e.currentTarget.style.background = '')}
+          >
+            <FileText className="w-4 h-4 flex-shrink-0" style={{ color: '#2563eb' }} />
+            <span className="hidden xs:inline">File</span>
+          </button>
+          <button
+            onClick={() => { setComposeQuote(''); setShowCompose(true) }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+            onMouseLeave={e => (e.currentTarget.style.background = '')}
+          >
+            <MessageCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#f59e0b' }} />
+            <span className="hidden xs:inline">Discuss</span>
+          </button>
         </div>
       </div>
 
@@ -989,12 +1040,12 @@ export default function FeedClient({
         ))}
       </div>
 
-      {/* Back-to-top button — mobile only, appears after scrolling 400px */}
+      {/* Back-to-top button — mobile only, appears after scrolling 400px, floats above bottom nav */}
       {showBackToTop && (
         <button
           onClick={scrollToTop}
-          className="md:hidden fixed bottom-24 right-4 z-30 w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all"
-          style={{ background: 'var(--brand)', color: 'white' }}
+          className="md:hidden fixed right-4 z-30 w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all"
+          style={{ background: 'var(--brand)', color: 'white', bottom: 'calc(56px + env(safe-area-inset-bottom) + 12px)' }}
           aria-label="Back to top"
         >
           <ArrowUp className="w-5 h-5" />

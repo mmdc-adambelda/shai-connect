@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import Topbar from '@/components/layout/Topbar'
+import BottomNav from '@/components/layout/BottomNav'
 import type { Profile } from '@/types'
 
 const IDLE_TIMEOUT_MS  = 2 * 60 * 60 * 1000  // 2 hours
@@ -70,16 +71,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <Topbar profile={profile} onMenuClick={() => setSidebarOpen(true)} />
         <main
-          className="flex-1 overflow-y-auto p-4 md:p-6"
+          className="flex-1 overflow-y-auto p-4 md:p-6 main-content-pb"
           style={{
             background: 'var(--surface-2)',
             overscrollBehaviorY: 'contain',
-            paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem))',
           }}
         >
           {children}
         </main>
       </div>
+
+      <BottomNav />
 
       {/* Idle warning banner */}
       {showIdleWarning && (
