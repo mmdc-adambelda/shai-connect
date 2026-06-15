@@ -13,11 +13,6 @@ export default async function TicketsPage() {
     .eq('id', user.id)
     .single()
 
-  // Agents go to the full service desk dashboard
-  if (profile && ['moderator', 'admin', 'superadmin'].includes(profile.role)) {
-    redirect('/support')
-  }
-
   const { data: myTickets } = await supabase
     .from('support_tickets')
     .select('*')
