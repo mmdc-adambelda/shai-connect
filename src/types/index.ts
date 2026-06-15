@@ -89,15 +89,49 @@ export interface Follow {
   created_at: string
 }
 
+export type TicketStatus = 'open' | 'assigned' | 'in_progress' | 'waiting_for_resident' | 'resolved' | 'closed'
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
+
 export interface SupportTicket {
   id: string
+  ticket_number: string
   user_id: string
-  type: 'bug' | 'feature' | 'feedback'
+  category: string
   subject: string
   description: string
-  status: 'open' | 'in_progress' | 'resolved' | 'closed'
+  priority: TicketPriority
+  status: TicketStatus
+  assigned_to: string | null
+  assigned_at: string | null
+  resolved_at: string | null
+  closed_at: string | null
+  contact_info: string | null
   created_at: string
-  profiles?: { full_name: string; unit: string }
+  updated_at: string
+  submitter?: { id: string; full_name: string; unit: string; role: string; avatar_url?: string | null }
+  assignee?: { id: string; full_name: string; role: string }
+}
+
+export interface TicketComment {
+  id: string
+  ticket_id: string
+  user_id: string
+  content: string
+  is_internal: boolean
+  created_at: string
+  updated_at: string
+  profiles?: { id: string; full_name: string; role: string; avatar_url?: string | null }
+}
+
+export interface TicketActivity {
+  id: string
+  ticket_id: string
+  user_id: string
+  action: string
+  old_value: string | null
+  new_value: string | null
+  created_at: string
+  profiles?: { id: string; full_name: string; role: string }
 }
 
 export interface ChatMessage {

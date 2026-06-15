@@ -262,10 +262,12 @@ export default function AdminClient({
   }
 
   // ── Ticket status toggle ───────────────────────────────────────
-  const handleTicketStatus = async (ticketId: string, status: 'open' | 'resolved') => {
+  const handleTicketStatus = async (ticketId: string, status: string) => {
     setTicketActionLoading(ticketId)
-    await supabase.from('support_tickets').update({ status }).eq('id', ticketId)
-    setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status } : t))
+    const updates: Record<string, unknown> = { status }
+    if (status === 'resolved') updates.resolved_at = new Date().toISOString()
+    await supabase.from('support_tickets').update(updates).eq('id', ticketId)
+    setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: status as SupportTicket['status'] } : t))
     setTicketActionLoading(null)
   }
 
@@ -325,11 +327,12 @@ export default function AdminClient({
   })
 
   const pendingCount = users.filter(u => !u.is_verified).length
-  const openTicketCount = tickets.filter(t => t.status === 'open').length
+  const openTicketCount = tickets.filter(t => t.status === 'open' || t.status === 'assigned').length
   const filteredTickets = tickets.filter(t => {
-    const matchType   = ticketTypeFilter === 'all' || t.type === ticketTypeFilter
-    const matchStatus = ticketStatusFilter === 'all' || t.status === ticketStatusFilter
-    return matchType && matchStatus
+    const matchStatus = ticketStatusFilter === 'all' || t.status === ticketStatusFilter ||
+      (ticketStatusFilter === 'open' && ['open','assigned','in_progress'].includes(t.status)) ||
+      (ticketStatusFilter === 'resolved' && ['resolved','closed'].includes(t.status))
+    return matchStatus
   })
 
   const statCards = [
@@ -689,6 +692,21 @@ export default function AdminClient({
       {/* ── TICKETS ── */}
       {tab === 'tickets' && (
         <div className="flex flex-col gap-4">
+          {/* Link to full service desk */}
+          <div className="card p-4 flex items-center justify-between gap-4"
+            style={{ background: 'var(--brand-xlight)', border: '1px solid var(--brand-light)' }}>
+            <div>
+              <p className="text-sm font-bold" style={{ color: 'var(--brand)' }}>Full Service Desk Available</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Assign tickets, add internal notes, view analytics, and manage the full queue from the Service Desk dashboard.
+              </p>
+            </div>
+            <a href="/support"
+              className="btn-primary flex-shrink-0 text-sm py-2 px-4">
+              Open Service Desk →
+            </a>
+          </div>
+
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Status filter */}
@@ -713,29 +731,6 @@ export default function AdminClient({
               ))}
             </div>
 
-            {/* Type filter */}
-            <div className="flex gap-1.5 flex-wrap">
-              {([
-                { key: 'all',      label: 'All Types' },
-                { key: 'bug',      label: 'Bug' },
-                { key: 'feature',  label: 'Feature' },
-                { key: 'feedback', label: 'Feedback' },
-              ] as const).map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setTicketTypeFilter(key)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                  style={{
-                    background: ticketTypeFilter === key ? 'var(--surface)' : 'var(--surface-2)',
-                    color:      ticketTypeFilter === key ? 'var(--text-primary)' : 'var(--text-muted)',
-                    border:     ticketTypeFilter === key ? '1px solid var(--border-soft)' : '1px solid transparent',
-                    boxShadow:  ticketTypeFilter === key ? 'var(--shadow-xs)' : 'none',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
 
             <span className="text-xs self-center ml-auto" style={{ color: 'var(--text-muted)' }}>
               {filteredTickets.length} ticket{filteredTickets.length !== 1 ? 's' : ''}
@@ -752,11 +747,10 @@ export default function AdminClient({
           ) : (
             <div className="flex flex-col gap-3">
               {filteredTickets.map(ticket => {
-                const meta = TICKET_TYPE_META[ticket.type]
-                const TypeIcon = meta.icon
-                const isOpen = ticket.status === 'open'
+                const isOpen = !['resolved','closed'].includes(ticket.status)
                 const isExpanded = expandedTicket === ticket.id
-                const submitter = ticket.profiles as unknown as { full_name: string; unit: string } | undefined
+                const submitter = (ticket as unknown as { submitter?: { full_name: string; unit: string } }).submitter
+                  || (ticket as unknown as { profiles?: { full_name: string; unit: string } }).profiles
 
                 return (
                   <div
@@ -766,35 +760,29 @@ export default function AdminClient({
                   >
                     {/* Top row */}
                     <div className="flex items-start gap-3">
-                      {/* Type icon */}
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{ background: meta.bg }}
-                      >
-                        <TypeIcon className="w-4 h-4" style={{ color: meta.color }} />
-                      </div>
-
-                      {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                          <span
-                            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                            style={{ background: meta.bg, color: meta.color }}
-                          >
-                            {meta.label}
+                          <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full"
+                            style={{ background: 'var(--brand-xlight)', color: 'var(--brand)' }}>
+                            {(ticket as SupportTicket).ticket_number || ticket.id.slice(0, 8)}
                           </span>
-                          <span
-                            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                             style={{
                               background: isOpen ? '#fef6e4' : '#dcfce7',
                               color: isOpen ? '#b45309' : '#166534',
-                            }}
-                          >
-                            {isOpen ? 'Open' : 'Resolved'}
+                            }}>
+                            {isOpen ? ticket.status.replace(/_/g, ' ') : 'Resolved'}
                           </span>
+                          {(ticket as SupportTicket).priority === 'urgent' && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                              style={{ background: '#FEF2F2', color: '#DC2626' }}>Urgent</span>
+                          )}
                         </div>
                         <p className="text-sm font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
                           {ticket.subject}
+                        </p>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                          {(ticket as SupportTicket).category?.replace(/_/g, ' ') || 'General'}
                         </p>
                         <p
                           className={clsx('text-xs mt-1 leading-relaxed', !isExpanded && 'line-clamp-2')}
@@ -823,20 +811,27 @@ export default function AdminClient({
                         {submitter?.unit && <span> · {submitter.unit}</span>}
                         <span> · {new Date(ticket.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                       </div>
-                      <button
-                        onClick={() => handleTicketStatus(ticket.id, isOpen ? 'resolved' : 'open')}
-                        disabled={ticketActionLoading === ticket.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-                        style={isOpen
-                          ? { background: '#dcfce7', color: '#166534', border: '1px solid #86efac' }
-                          : { background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border-soft)' }
-                        }
-                      >
-                        {isOpen
-                          ? <><CheckCircle className="w-3.5 h-3.5" /> {ticketActionLoading === ticket.id ? '…' : 'Mark Resolved'}</>
-                          : <><RotateCcw className="w-3.5 h-3.5" /> {ticketActionLoading === ticket.id ? '…' : 'Reopen'}</>
-                        }
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <a href={`/tickets/${ticket.id}`}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                          style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border-soft)' }}>
+                          View →
+                        </a>
+                        <button
+                          onClick={() => handleTicketStatus(ticket.id, isOpen ? 'resolved' : 'open')}
+                          disabled={ticketActionLoading === ticket.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                          style={isOpen
+                            ? { background: '#dcfce7', color: '#166534', border: '1px solid #86efac' }
+                            : { background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border-soft)' }
+                          }
+                        >
+                          {isOpen
+                            ? <><CheckCircle className="w-3.5 h-3.5" /> {ticketActionLoading === ticket.id ? '…' : 'Resolve'}</>
+                            : <><RotateCcw className="w-3.5 h-3.5" /> {ticketActionLoading === ticket.id ? '…' : 'Reopen'}</>
+                          }
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )

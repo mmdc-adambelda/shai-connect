@@ -7,7 +7,7 @@ import {
   Newspaper, Megaphone,
   Users, User, ShieldCheck, Video, X,
   Rss, FileText, BarChart3, LogOut, Phone,
-  MessageSquare, Mail, LifeBuoy,
+  MessageSquare, Mail, LifeBuoy, Headphones,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useEffect } from 'react'
@@ -39,6 +39,7 @@ interface SidebarProps {
 
 export default function Sidebar({ open, onClose, profile }: SidebarProps) {
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin'
+  const isAgent = profile?.role === 'moderator' || profile?.role === 'admin' || profile?.role === 'superadmin'
   const pathname = usePathname()
   const router = useRouter()
 
@@ -156,8 +157,9 @@ export default function Sidebar({ open, onClose, profile }: SidebarProps) {
           Account
         </p>
         {[
-          { label: 'My Profile',  href: '/profile', icon: User        },
-          ...(isAdmin ? [{ label: 'Admin Panel', href: '/admin', icon: ShieldCheck }] : []),
+          { label: 'My Profile',   href: '/profile', icon: User        },
+          ...(isAgent ? [{ label: 'Service Desk',  href: '/support', icon: Headphones }] : []),
+          ...(isAdmin ? [{ label: 'Admin Panel',   href: '/admin',   icon: ShieldCheck }] : []),
         ].map(({ label, href, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (

@@ -37,7 +37,11 @@ export default async function AdminPage() {
 
   const { data: tickets } = await supabase
     .from('support_tickets')
-    .select('*, profiles(full_name, unit)')
+    .select(`
+      *,
+      submitter:profiles!support_tickets_user_id_fkey(id, full_name, unit, role),
+      assignee:profiles!support_tickets_assigned_to_fkey(id, full_name, role)
+    `)
     .order('created_at', { ascending: false })
 
   return (
