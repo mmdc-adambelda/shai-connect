@@ -98,7 +98,7 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
       supabase.removeChannel(dmChannel)
       supabase.removeChannel(chatChannel)
     }
-  }, [profile?.id, profile?.phase])
+  }, [profile?.id])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()

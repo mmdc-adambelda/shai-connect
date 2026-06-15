@@ -76,25 +76,25 @@ export default function MessagesClient({
   }, [thread])
 
   useEffect(() => {
+    // Only subscribe to incoming messages — outgoing are added optimistically in sendMessage()
     const channel = supabase
-      .channel('direct_messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages' }, async payload => {
+      .channel(`dm:incoming:${currentUserId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'direct_messages',
+        filter: `recipient_id=eq.${currentUserId}`,
+      }, async payload => {
         const msg = payload.new as DirectMessage
-        const isRelevant = msg.sender_id === currentUserId || msg.recipient_id === currentUserId
-        if (!isRelevant) return
-        const otherId = msg.sender_id === currentUserId ? msg.recipient_id : msg.sender_id
-        if (otherId === activeUserId) {
-          const { data } = await supabase
-            .from('direct_messages')
-            .select('*, sender:profiles!direct_messages_sender_id_fkey(id, full_name, unit, role), recipient:profiles!direct_messages_recipient_id_fkey(id, full_name, unit, role)')
-            .eq('id', msg.id)
-            .single()
-          if (data) setThread(prev => [...prev, data])
-        }
+        if (msg.sender_id !== activeUserId) return
+        const { data } = await supabase
+          .from('direct_messages')
+          .select('*, sender:profiles!direct_messages_sender_id_fkey(id, full_name, unit, role), recipient:profiles!direct_messages_recipient_id_fkey(id, full_name, unit, role)')
+          .eq('id', msg.id)
+          .single()
+        if (data) setThread(prev => [...prev, data])
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [activeUserId])
+  }, [activeUserId, currentUserId])
 
   // FAB button → open new DM modal
   useEffect(() => {
@@ -136,12 +136,14 @@ export default function MessagesClient({
   const sendMessage = async () => {
     if (!input.trim() || !activeUserId || sending) return
     setSending(true)
-    await supabase.from('direct_messages').insert({
-      sender_id: currentUserId,
-      recipient_id: activeUserId,
-      content: input.trim(),
-    })
+    const content = input.trim()
     setInput('')
+    const { data } = await supabase
+      .from('direct_messages')
+      .insert({ sender_id: currentUserId, recipient_id: activeUserId, content })
+      .select('*, sender:profiles!direct_messages_sender_id_fkey(id, full_name, unit, role), recipient:profiles!direct_messages_recipient_id_fkey(id, full_name, unit, role)')
+      .single()
+    if (data) setThread(prev => [...prev, data])
     setSending(false)
     if (dmInputRef.current) {
       dmInputRef.current.style.height = 'auto'

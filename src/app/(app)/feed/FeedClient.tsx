@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, memo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
@@ -434,7 +434,6 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
   const [replyText, setReplyText] = useState('')
 
   const loadComments = useCallback(async () => {
-    if (loading) return
     setLoading(true)
     try {
       const res = await fetch(`/api/posts/${postId}/comments?limit=20`)
@@ -444,9 +443,9 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
     } finally {
       setLoading(false)
     }
-  }, [postId, loading])
+  }, [postId])
 
-  if (!loaded && !loading) loadComments()
+  useEffect(() => { loadComments() }, [])
 
   const submitComment = async (parentId?: string) => {
     const content = parentId ? replyText.trim() : text.trim()
@@ -651,7 +650,7 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
 }
 
 // ── Post Card ────────────────────────────────────────────────────────────────
-function PostCard({
+const PostCard = memo(function PostCard({
   post,
   currentUserId,
   currentProfile,
@@ -778,7 +777,7 @@ function PostCard({
       </div>
     </div>
   )
-}
+})
 
 // ── Compose Modal ────────────────────────────────────────────────────────────
 function ComposeModal({
