@@ -4,6 +4,12 @@
 --   Dashboard → SQL Editor → New Query → Paste → Run
 -- ============================================================
 
+-- ── 0. Drop old tables cleanly (safe: cascades to comments/activity) ──
+DROP TABLE IF EXISTS public.ticket_activity  CASCADE;
+DROP TABLE IF EXISTS public.ticket_comments  CASCADE;
+DROP TABLE IF EXISTS public.support_tickets  CASCADE;
+DROP TABLE IF EXISTS public.ticket_counters  CASCADE;
+
 -- ── 1. Ticket counter (per-year auto-increment) ─────────────
 CREATE TABLE IF NOT EXISTS public.ticket_counters (
   year    INTEGER PRIMARY KEY,
