@@ -116,7 +116,6 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
     <header
       className="sticky top-0 z-40 flex-shrink-0"
       style={{
-        paddingTop: 'env(safe-area-inset-top)',
         background: 'var(--surface)',
         borderBottom: '1px solid var(--border)',
         boxShadow: 'var(--shadow-xs)',
@@ -209,7 +208,7 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
             <div
               className="fixed right-3 z-50 overflow-hidden card"
               style={{
-                top: 'calc(3.5rem + env(safe-area-inset-top))',
+                top: '3.5rem',
                 width: 'min(340px, calc(100vw - 1.5rem))',
                 maxHeight: 'calc(100vh - 5rem)',
                 boxShadow: 'var(--shadow-lg)',
