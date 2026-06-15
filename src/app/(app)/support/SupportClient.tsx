@@ -296,7 +296,7 @@ export default function SupportClient({
     }
     await supabase.from('support_tickets').update(updates).eq('id', ticketId)
     setTickets(prev => prev.map(t => t.id === ticketId
-      ? { ...t, ...updates, assignee: agent ? { id: agent.id, full_name: agent.full_name, role: agent.role } : undefined }
+      ? { ...t, ...updates, assignee: agent ? { id: agent.id, full_name: agent.full_name, role: agent.role } : null }
       : t
     ))
   }

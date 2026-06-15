@@ -108,8 +108,8 @@ export interface SupportTicket {
   contact_info: string | null
   created_at: string
   updated_at: string
-  submitter?: { id: string; full_name: string; unit: string; role: string; avatar_url?: string | null }
-  assignee?: { id: string; full_name: string; role: string }
+  submitter?: { id: string; full_name: string; unit: string; role: string; avatar_url?: string | null } | null
+  assignee?: { id: string; full_name: string; role: string } | null
 }
 
 export interface TicketComment {
