@@ -7,6 +7,8 @@ import { formatDistanceToNow } from 'date-fns'
 import type { ChatMessage, Profile } from '@/types'
 import clsx from 'clsx'
 
+const CHAT_EMOJIS = ['❤️', '👍', '😂', '😮', '🥺', '🔥']
+
 function Avatar({ name, size = 'sm' }: { name: string; size?: 'sm' | 'md' }) {
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
   const dim = size === 'md' ? 36 : 28
@@ -45,6 +47,12 @@ export default function ChatClient({
   const bottomRef = useRef<HTMLDivElement>(null)
   const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const supabase = createClient()
+
+  // Reaction state
+  const [msgReactionCounts, setMsgReactionCounts] = useState<Record<string, Record<string, number>>>({})
+  const [myMsgReactions, setMyMsgReactions] = useState<Record<string, string | null>>({})
+  const [emojiPickerId, setEmojiPickerId] = useState<string | null>(null)
+  const loadedReactionIds = useRef<Set<string>>(new Set())
 
   const resizeChatInput = useCallback((el: HTMLTextAreaElement | null) => {
     if (!el) return
@@ -88,10 +96,44 @@ export default function ChatClient({
     return () => document.removeEventListener('click', close)
   }, [activeMessageId])
 
+  // Load reactions for newly visible messages
+  useEffect(() => {
+    const newIds = messages.map(m => m.id).filter(id => !loadedReactionIds.current.has(id))
+    if (!newIds.length) return
+    newIds.forEach(id => loadedReactionIds.current.add(id))
+    const load = async () => {
+      const { data } = await supabase
+        .from('chat_message_reactions')
+        .select('message_id, emoji, user_id')
+        .in('message_id', newIds)
+      const counts: Record<string, Record<string, number>> = {}
+      const mine: Record<string, string | null> = {}
+      for (const r of data ?? []) {
+        if (!counts[r.message_id]) counts[r.message_id] = {}
+        counts[r.message_id][r.emoji] = (counts[r.message_id][r.emoji] || 0) + 1
+        if (r.user_id === currentUserId) mine[r.message_id] = r.emoji
+      }
+      setMsgReactionCounts(prev => ({ ...prev, ...counts }))
+      setMyMsgReactions(prev => ({ ...prev, ...mine }))
+    }
+    load()
+  }, [messages]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    if (!emojiPickerId) return
+    const close = () => setEmojiPickerId(null)
+    setTimeout(() => document.addEventListener('click', close), 0)
+    return () => document.removeEventListener('click', close)
+  }, [emojiPickerId])
+
   const switchRoom = async (room: string) => {
     setActiveRoom(room)
     setRoomPickerOpen(false)
     setLoadingRoom(true)
+    loadedReactionIds.current.clear()
+    setMsgReactionCounts({})
+    setMyMsgReactions({})
     const { data } = await supabase
       .from('chat_messages')
       .select('*, profiles(id, full_name, unit)')
@@ -129,6 +171,35 @@ export default function ChatClient({
     await supabase.from('chat_messages').delete().eq('id', id).eq('sender_id', currentUserId)
     setMessages(prev => prev.filter(m => m.id !== id))
     setActiveMessageId(null)
+  }
+
+  const toggleMsgReaction = async (messageId: string, emoji: string) => {
+    const currentEmoji = myMsgReactions[messageId]
+    if (currentEmoji === emoji) {
+      await supabase.from('chat_message_reactions').delete()
+        .match({ message_id: messageId, user_id: currentUserId })
+      setMyMsgReactions(p => ({ ...p, [messageId]: null }))
+      setMsgReactionCounts(p => {
+        const m = { ...(p[messageId] || {}) }
+        m[emoji] = Math.max(0, (m[emoji] || 1) - 1)
+        if (!m[emoji]) delete m[emoji]
+        return { ...p, [messageId]: m }
+      })
+    } else {
+      await supabase.from('chat_message_reactions')
+        .upsert({ message_id: messageId, user_id: currentUserId, emoji }, { onConflict: 'message_id,user_id' })
+      setMyMsgReactions(p => ({ ...p, [messageId]: emoji }))
+      setMsgReactionCounts(p => {
+        const m = { ...(p[messageId] || {}) }
+        if (currentEmoji) {
+          m[currentEmoji] = Math.max(0, (m[currentEmoji] || 1) - 1)
+          if (!m[currentEmoji]) delete m[currentEmoji]
+        }
+        m[emoji] = (m[emoji] || 0) + 1
+        return { ...p, [messageId]: m }
+      })
+    }
+    setEmojiPickerId(null)
   }
 
   return (
@@ -200,6 +271,10 @@ export default function ChatClient({
           {!loadingRoom && messages.map(msg => {
             const sender = msg.profiles as unknown as Profile
             const isMe = msg.sender_id === currentUserId
+            const msgCounts = msgReactionCounts[msg.id] || {}
+            const myReaction = myMsgReactions[msg.id]
+            const reactionEntries = Object.entries(msgCounts).filter(([, c]) => c > 0)
+
             return (
               <div key={msg.id} className={clsx('flex gap-2.5', isMe && 'flex-row-reverse')}>
                 {!isMe && <Avatar name={sender?.full_name || 'Resident'} />}
@@ -210,9 +285,12 @@ export default function ChatClient({
                     </p>
                   )}
 
-                  {/* Message bubble with hover/tap actions for own messages */}
-                  <div className="group relative">
-                    {/* Action toolbar — hover on desktop, tap on mobile */}
+                  {/* Message bubble container */}
+                  <div className={clsx(
+                    'group relative',
+                    !isMe && editingId !== msg.id && 'flex items-center gap-1'
+                  )}>
+                    {/* Own-message toolbar */}
                     {isMe && editingId !== msg.id && (
                       <div
                         className={clsx(
@@ -224,6 +302,13 @@ export default function ChatClient({
                         style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)' }}
                         onClick={e => e.stopPropagation()}
                       >
+                        <button
+                          onClick={() => setEmojiPickerId(p => p === msg.id ? null : msg.id)}
+                          className="text-xs px-2 py-1 rounded-md font-medium transition-colors"
+                          style={{ color: 'var(--text-secondary)' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand)')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                        >React</button>
                         <button
                           onClick={() => { setEditingId(msg.id); setEditContent(msg.content); setActiveMessageId(null) }}
                           className="text-xs px-2 py-1 rounded-md font-medium transition-colors"
@@ -239,6 +324,35 @@ export default function ChatClient({
                           onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
                         >Unsend</button>
                       </div>
+                    )}
+
+                    {/* Emoji picker popup */}
+                    {emojiPickerId === msg.id && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setEmojiPickerId(null)} />
+                        <div
+                          className="absolute z-20 flex gap-0.5 p-1.5 rounded-full"
+                          style={{
+                            background: 'var(--surface)',
+                            boxShadow: '0 4px 24px rgba(0,0,0,0.15), 0 1px 6px rgba(0,0,0,0.06)',
+                            border: '1px solid var(--border-soft)',
+                            bottom: 'calc(100% + 6px)',
+                            ...(isMe ? { right: 0 } : { left: 0 }),
+                          }}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          {CHAT_EMOJIS.map(emoji => (
+                            <button
+                              key={emoji}
+                              onClick={() => toggleMsgReaction(msg.id, emoji)}
+                              className="w-9 h-9 flex items-center justify-center text-xl rounded-full transition-all hover:scale-125 active:scale-95"
+                              style={{ background: myReaction === emoji ? 'rgba(234,179,8,0.18)' : 'transparent' }}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </>
                     )}
 
                     {editingId === msg.id ? (
@@ -281,7 +395,38 @@ export default function ChatClient({
                         {msg.content}
                       </div>
                     )}
+
+                    {/* Others' message react button — shown on group hover */}
+                    {!isMe && editingId !== msg.id && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setEmojiPickerId(p => p === msg.id ? null : msg.id) }}
+                        className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-base opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)' }}
+                      >
+                        😊
+                      </button>
+                    )}
                   </div>
+
+                  {/* Reaction pills */}
+                  {reactionEntries.length > 0 && (
+                    <div className={`flex flex-wrap gap-1 mt-1 ${isMe ? 'justify-end' : ''}`}>
+                      {reactionEntries.map(([emoji, count]) => (
+                        <button
+                          key={emoji}
+                          onClick={() => toggleMsgReaction(msg.id, emoji)}
+                          className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs active:scale-95 transition-all"
+                          style={{
+                            background: myReaction === emoji ? 'rgba(234,179,8,0.15)' : 'var(--surface-2)',
+                            border: `1px solid ${myReaction === emoji ? 'rgba(234,179,8,0.4)' : 'var(--border-soft)'}`,
+                          }}
+                        >
+                          <span className="text-base leading-none">{emoji}</span>
+                          <span style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: 10 }}>{count}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   <p className="text-[10px] mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>
                     {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}

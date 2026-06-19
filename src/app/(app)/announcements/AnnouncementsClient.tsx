@@ -26,7 +26,7 @@ export default function AnnouncementsClient({
   currentUserId: string
 }) {
   const supabase = createClient()
-  const isAdminOrMod = currentProfile?.role === 'admin' || currentProfile?.role === 'moderator'
+  const isAdminOrMod = ['admin', 'moderator', 'superadmin'].includes(currentProfile?.role || '')
 
   // List state
   const [announcements, setAnnouncements] = useState(initial)

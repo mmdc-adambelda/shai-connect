@@ -238,7 +238,7 @@
     font-size: 0.8125rem; font-weight: 500;
     color: var(--text-secondary);
     background: transparent; border: none; cursor: pointer;
-    transition: all 0.13s ease; font-family: inherit;
+    transition: all 0.15s ease; font-family: inherit;
   }
   .reaction-btn:hover { background: var(--surface-3); color: var(--text-primary); }
   .reaction-btn.active { background: var(--brand-xlight); color: var(--brand); font-weight: 600; }
@@ -246,22 +246,25 @@
   .reaction-btn:active { transform: scale(0.96); }
 
   .reaction-picker {
-    display: flex; align-items: center; gap: 2px;
+    display: flex; align-items: center; gap: 1px;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 999px; padding: 5px 10px;
-    box-shadow: var(--shadow-lg);
-    animation: popIn 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid var(--border-soft);
+    border-radius: 999px; padding: 6px 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    animation: popIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   @keyframes popIn {
-    from { opacity: 0; transform: scale(0.8) translateY(4px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
+    from { opacity: 0; transform: scale(0.75) translateY(6px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0);   }
   }
   .reaction-emoji {
-    font-size: 1.375rem; padding: 4px 6px; border-radius: 999px;
-    cursor: pointer; transition: transform 0.12s ease; user-select: none; line-height: 1;
+    font-size: 1.5rem; width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 999px; cursor: pointer;
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    user-select: none; line-height: 1;
   }
-  .reaction-emoji:hover { transform: scale(1.4); background: var(--surface-2); }
+  .reaction-emoji:hover { transform: scale(1.45) translateY(-3px); }
 
   /* ─── Comment Bubble ─────────────────────────────────────────── */
   .comment-bubble {

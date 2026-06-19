@@ -16,13 +16,13 @@ import AvatarUI from '@/components/ui/Avatar'
 
 const PHASES = ['All Phases', 'Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
 
-const REACTIONS: { type: ReactionType; emoji: string; label: string }[] = [
-  { type: 'like',  emoji: '👍', label: 'Like'  },
-  { type: 'love',  emoji: '❤️', label: 'Love'  },
-  { type: 'haha',  emoji: '😂', label: 'Haha'  },
-  { type: 'wow',   emoji: '😮', label: 'Wow'   },
-  { type: 'sad',   emoji: '😢', label: 'Sad'   },
-  { type: 'angry', emoji: '😡', label: 'Angry' },
+const REACTIONS: { type: ReactionType; emoji: string; label: string; pastel: string }[] = [
+  { type: 'like',  emoji: '👍', label: 'Like',  pastel: 'rgba(59,130,246,0.15)'  },
+  { type: 'love',  emoji: '❤️', label: 'Love',  pastel: 'rgba(236,72,153,0.15)' },
+  { type: 'haha',  emoji: '😂', label: 'Haha',  pastel: 'rgba(234,179,8,0.15)'  },
+  { type: 'wow',   emoji: '😮', label: 'Wow',   pastel: 'rgba(139,92,246,0.15)' },
+  { type: 'sad',   emoji: '😢', label: 'Sad',   pastel: 'rgba(14,165,233,0.15)' },
+  { type: 'angry', emoji: '😡', label: 'Angry', pastel: 'rgba(239,68,68,0.15)'  },
 ]
 
 function RoleBadge({ role }: { role: string }) {
@@ -317,12 +317,18 @@ function ReactionBar({
         <div className="flex items-center justify-between mb-2 px-1">
           {total > 0 ? (
             <div className="flex items-center gap-1.5">
-              <div className="flex -space-x-0.5">
+              <div className="flex items-center -space-x-0.5">
                 {topReactions.map((r) => (
-                  <span key={r.type} className="text-sm leading-none">{r.emoji}</span>
+                  <span
+                    key={r.type}
+                    className="w-5 h-5 flex items-center justify-center rounded-full text-xs leading-none"
+                    style={{ background: r.pastel, border: '1.5px solid var(--surface)' }}
+                  >
+                    {r.emoji}
+                  </span>
                 ))}
               </div>
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{total}</span>
+              <span className="text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ color: 'var(--text-muted)', background: 'var(--surface-2)' }}>{total}</span>
             </div>
           ) : <span />}
 
@@ -377,6 +383,8 @@ function ReactionBar({
                   className="reaction-emoji"
                   title={r.label}
                   onClick={() => { react(r.type); setPickerOpen(false) }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = r.pastel }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '' }}
                 >
                   {r.emoji}
                 </button>

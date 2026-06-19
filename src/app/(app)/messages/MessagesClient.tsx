@@ -7,6 +7,8 @@ import { formatDistanceToNow } from 'date-fns'
 import type { DirectMessage, Profile } from '@/types'
 import clsx from 'clsx'
 
+const DM_EMOJIS = ['❤️', '👍', '😂', '😮', '🥺', '🔥']
+
 function initials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
@@ -60,6 +62,12 @@ export default function MessagesClient({
   const bottomRef = useRef<HTMLDivElement>(null)
   const dmInputRef = useRef<HTMLTextAreaElement>(null)
 
+  // Reaction state
+  const [dmReactionCounts, setDmReactionCounts] = useState<Record<string, Record<string, number>>>({})
+  const [myDmReactions, setMyDmReactions] = useState<Record<string, string | null>>({})
+  const [emojiPickerId, setEmojiPickerId] = useState<string | null>(null)
+  const loadedReactionIds = useRef<Set<string>>(new Set())
+
   const resizeDmInput = useCallback((el: HTMLTextAreaElement | null) => {
     if (!el) return
     el.style.height = 'auto'
@@ -111,6 +119,37 @@ export default function MessagesClient({
     return () => document.removeEventListener('click', close)
   }, [activeMessageId])
 
+  // Load reactions for newly visible messages
+  useEffect(() => {
+    const newIds = thread.map(m => m.id).filter(id => !loadedReactionIds.current.has(id))
+    if (!newIds.length) return
+    newIds.forEach(id => loadedReactionIds.current.add(id))
+    const load = async () => {
+      const { data } = await supabase
+        .from('dm_reactions')
+        .select('message_id, emoji, user_id')
+        .in('message_id', newIds)
+      const counts: Record<string, Record<string, number>> = {}
+      const mine: Record<string, string | null> = {}
+      for (const r of data ?? []) {
+        if (!counts[r.message_id]) counts[r.message_id] = {}
+        counts[r.message_id][r.emoji] = (counts[r.message_id][r.emoji] || 0) + 1
+        if (r.user_id === currentUserId) mine[r.message_id] = r.emoji
+      }
+      setDmReactionCounts(prev => ({ ...prev, ...counts }))
+      setMyDmReactions(prev => ({ ...prev, ...mine }))
+    }
+    load()
+  }, [thread]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    if (!emojiPickerId) return
+    const close = () => setEmojiPickerId(null)
+    setTimeout(() => document.addEventListener('click', close), 0)
+    return () => document.removeEventListener('click', close)
+  }, [emojiPickerId])
+
   const updateDM = async (id: string, content: string) => {
     if (!content.trim()) return
     await supabase.from('direct_messages').update({ content: content.trim() }).eq('id', id).eq('sender_id', currentUserId)
@@ -125,6 +164,9 @@ export default function MessagesClient({
   }
 
   const loadThread = async (userId: string) => {
+    loadedReactionIds.current.clear()
+    setDmReactionCounts({})
+    setMyDmReactions({})
     const { data } = await supabase
       .from('direct_messages')
       .select('*, sender:profiles!direct_messages_sender_id_fkey(id, full_name, unit, role), recipient:profiles!direct_messages_recipient_id_fkey(id, full_name, unit, role)')
@@ -149,6 +191,35 @@ export default function MessagesClient({
       dmInputRef.current.style.height = 'auto'
       dmInputRef.current.focus()
     }
+  }
+
+  const toggleDmReaction = async (messageId: string, emoji: string) => {
+    const currentEmoji = myDmReactions[messageId]
+    if (currentEmoji === emoji) {
+      await supabase.from('dm_reactions').delete()
+        .match({ message_id: messageId, user_id: currentUserId })
+      setMyDmReactions(p => ({ ...p, [messageId]: null }))
+      setDmReactionCounts(p => {
+        const m = { ...(p[messageId] || {}) }
+        m[emoji] = Math.max(0, (m[emoji] || 1) - 1)
+        if (!m[emoji]) delete m[emoji]
+        return { ...p, [messageId]: m }
+      })
+    } else {
+      await supabase.from('dm_reactions')
+        .upsert({ message_id: messageId, user_id: currentUserId, emoji }, { onConflict: 'message_id,user_id' })
+      setMyDmReactions(p => ({ ...p, [messageId]: emoji }))
+      setDmReactionCounts(p => {
+        const m = { ...(p[messageId] || {}) }
+        if (currentEmoji) {
+          m[currentEmoji] = Math.max(0, (m[currentEmoji] || 1) - 1)
+          if (!m[currentEmoji]) delete m[currentEmoji]
+        }
+        m[emoji] = (m[emoji] || 0) + 1
+        return { ...p, [messageId]: m }
+      })
+    }
+    setEmojiPickerId(null)
   }
 
   const startNewDM = async (profile: Profile) => {
@@ -218,7 +289,6 @@ export default function MessagesClient({
           'flex-shrink-0 flex flex-col',
           'border-r',
           'md:w-64',
-          // mobile: full-width when viewing list, hidden when viewing thread
           mobileView === 'list' ? 'flex w-full' : 'hidden md:flex',
         )} style={{ borderColor: 'var(--border-soft)' }}>
           <div className="p-3 flex-shrink-0" style={{ borderBottom: '1px solid var(--border-soft)' }}>
@@ -275,7 +345,6 @@ export default function MessagesClient({
                 className="px-4 py-3 flex items-center gap-3 flex-shrink-0"
                 style={{ borderBottom: '1px solid var(--border-soft)' }}
               >
-                {/* Back button — mobile only */}
                 <button
                   onClick={() => setMobileView('list')}
                   className="md:hidden btn-icon w-8 h-8 flex-shrink-0 -ml-1"
@@ -297,11 +366,19 @@ export default function MessagesClient({
                 )}
                 {thread.map(msg => {
                   const isMe = msg.sender_id === currentUserId
+                  const msgCounts = dmReactionCounts[msg.id] || {}
+                  const myReaction = myDmReactions[msg.id]
+                  const reactionEntries = Object.entries(msgCounts).filter(([, c]) => c > 0)
+
                   return (
                     <div key={msg.id} className={clsx('flex gap-2', isMe && 'flex-row-reverse')}>
                       <div className={clsx('max-w-[75%] sm:max-w-[65%]', isMe && 'items-end flex flex-col')}>
-                        {/* Message bubble with hover/tap actions for own messages */}
-                        <div className="group relative">
+                        {/* Message bubble container */}
+                        <div className={clsx(
+                          'group relative',
+                          !isMe && editingId !== msg.id && 'flex items-center gap-1'
+                        )}>
+                          {/* Own-message toolbar */}
                           {isMe && editingId !== msg.id && (
                             <div
                               className={clsx(
@@ -313,6 +390,13 @@ export default function MessagesClient({
                               style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)' }}
                               onClick={e => e.stopPropagation()}
                             >
+                              <button
+                                onClick={() => setEmojiPickerId(p => p === msg.id ? null : msg.id)}
+                                className="text-xs px-2 py-1 rounded-md font-medium transition-colors"
+                                style={{ color: 'var(--text-secondary)' }}
+                                onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand)')}
+                                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                              >React</button>
                               <button
                                 onClick={() => { setEditingId(msg.id); setEditContent(msg.content); setActiveMessageId(null) }}
                                 className="text-xs px-2 py-1 rounded-md font-medium transition-colors"
@@ -328,6 +412,35 @@ export default function MessagesClient({
                                 onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
                               >Unsend</button>
                             </div>
+                          )}
+
+                          {/* Emoji picker popup */}
+                          {emojiPickerId === msg.id && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => setEmojiPickerId(null)} />
+                              <div
+                                className="absolute z-20 flex gap-0.5 p-1.5 rounded-full"
+                                style={{
+                                  background: 'var(--surface)',
+                                  boxShadow: '0 4px 24px rgba(0,0,0,0.15), 0 1px 6px rgba(0,0,0,0.06)',
+                                  border: '1px solid var(--border-soft)',
+                                  bottom: 'calc(100% + 6px)',
+                                  ...(isMe ? { right: 0 } : { left: 0 }),
+                                }}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                {DM_EMOJIS.map(emoji => (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => toggleDmReaction(msg.id, emoji)}
+                                    className="w-9 h-9 flex items-center justify-center text-xl rounded-full transition-all hover:scale-125 active:scale-95"
+                                    style={{ background: myReaction === emoji ? 'rgba(234,179,8,0.18)' : 'transparent' }}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            </>
                           )}
 
                           {editingId === msg.id ? (
@@ -369,8 +482,40 @@ export default function MessagesClient({
                               {msg.content}
                             </div>
                           )}
+
+                          {/* Others' message react button — shown on group hover */}
+                          {!isMe && editingId !== msg.id && (
+                            <button
+                              onClick={e => { e.stopPropagation(); setEmojiPickerId(p => p === msg.id ? null : msg.id) }}
+                              className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-base opacity-0 group-hover:opacity-100 transition-opacity"
+                              style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)' }}
+                            >
+                              😊
+                            </button>
+                          )}
                         </div>
-                        <p className="text-[10px] mt-1" style={{ color: isMe ? 'var(--text-muted)' : 'var(--text-muted)' }}>
+
+                        {/* Reaction pills */}
+                        {reactionEntries.length > 0 && (
+                          <div className={`flex flex-wrap gap-1 mt-1 ${isMe ? 'justify-end' : ''}`}>
+                            {reactionEntries.map(([emoji, count]) => (
+                              <button
+                                key={emoji}
+                                onClick={() => toggleDmReaction(msg.id, emoji)}
+                                className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs active:scale-95 transition-all"
+                                style={{
+                                  background: myReaction === emoji ? 'rgba(234,179,8,0.15)' : 'var(--surface-2)',
+                                  border: `1px solid ${myReaction === emoji ? 'rgba(234,179,8,0.4)' : 'var(--border-soft)'}`,
+                                }}
+                              >
+                                <span className="text-base leading-none">{emoji}</span>
+                                <span style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: 10 }}>{count}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
                           {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                         </p>
                       </div>
