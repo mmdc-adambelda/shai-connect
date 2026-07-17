@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import Topbar from '@/components/layout/Topbar'
 import BottomNav from '@/components/layout/BottomNav'
 import FAB from '@/components/ui/FAB'
+import { useUnreadDMs } from '@/hooks/useUnreadDMs'
 import type { Profile } from '@/types'
 
 const IDLE_TIMEOUT_MS  = 2 * 60 * 60 * 1000  // 2 hours
@@ -19,6 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const idleTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const warnTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router      = useRouter()
+  const unreadDMs   = useUnreadDMs(profile?.id)
 
   useEffect(() => {
     const load = async () => {
@@ -70,7 +72,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} profile={profile} />
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
-        <Topbar profile={profile} onMenuClick={() => setSidebarOpen(true)} />
+        <Topbar profile={profile} onMenuClick={() => setSidebarOpen(true)} unreadDMs={unreadDMs} />
         <main
           className="flex-1 overflow-y-auto p-4 md:p-6 main-content-pb"
           style={{
@@ -82,7 +84,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      <BottomNav userId={profile?.id} />
+      <BottomNav unreadDMs={unreadDMs} />
       <FAB />
 
       {/* Idle warning banner */}

@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Newspaper, Megaphone, MessageSquare, Mail, User } from 'lucide-react'
-import { useUnreadDMs } from '@/hooks/useUnreadDMs'
 
 const LEFT_ITEMS = [
   { href: '/feed',           icon: Newspaper, label: 'Feed'  },
@@ -15,10 +14,9 @@ const RIGHT_ITEMS = [
   { href: '/profile', icon: User, label: 'Profile' },
 ]
 
-export default function BottomNav({ userId }: { userId?: string | null }) {
+export default function BottomNav({ unreadDMs }: { unreadDMs: number }) {
   const pathname  = usePathname()
   const router    = useRouter()
-  const unreadDMs = useUnreadDMs(userId)
   const [showChatSheet, setShowChatSheet] = useState(false)
 
   const chatActive = pathname === '/chat' || pathname.startsWith('/chat/') ||

@@ -9,7 +9,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import AvatarUI from '@/components/ui/Avatar'
-import { useUnreadDMs } from '@/hooks/useUnreadDMs'
 import type { Profile } from '@/types'
 
 interface AppNotification {
@@ -25,9 +24,10 @@ interface AppNotification {
 interface TopbarProps {
   profile: Profile | null
   onMenuClick: () => void
+  unreadDMs: number
 }
 
-export default function Topbar({ profile, onMenuClick }: TopbarProps) {
+export default function Topbar({ profile, onMenuClick, unreadDMs }: TopbarProps) {
   const { theme, toggle } = useTheme()
   const router = useRouter()
   const pathname = usePathname()
@@ -37,7 +37,6 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
   const [showMobileSearch, setShowMobileSearch] = useState(false)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const unreadCount = notifications.filter(n => !n.read).length
-  const unreadDMs = useUnreadDMs(profile?.id)
   const isAgentOrAdmin = profile?.role === 'moderator' || profile?.role === 'admin' || profile?.role === 'superadmin'
   const chatActive = pathname === '/chat' || pathname.startsWith('/chat/') ||
                       pathname === '/messages' || pathname.startsWith('/messages/')
