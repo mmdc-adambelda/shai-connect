@@ -35,6 +35,18 @@ export default async function AdminPage() {
     .from('chat_messages')
     .select('*', { count: 'exact', head: true })
 
+  const { data: residents } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('full_name')
+
+  const { data: follows } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', user.id)
+
+  const followingIds = new Set((follows || []).map(f => f.following_id))
+
   return (
     <AdminClient
       users={allUsers || []}
@@ -45,6 +57,8 @@ export default async function AdminPage() {
         totalAnnouncements: announcementCount || 0,
         totalMessages: messageCount || 0,
       }}
+      residents={residents || []}
+      initialFollowing={followingIds}
     />
   )
 }

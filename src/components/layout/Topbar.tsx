@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import AvatarUI from '@/components/ui/Avatar'
+import { useUnreadDMs } from '@/hooks/useUnreadDMs'
 import type { Profile } from '@/types'
 
 interface AppNotification {
@@ -32,9 +33,14 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
   const pathname = usePathname()
   const supabase = createClient()
   const [showNotifs, setShowNotifs] = useState(false)
+  const [showChatMenu, setShowChatMenu] = useState(false)
   const [showMobileSearch, setShowMobileSearch] = useState(false)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const unreadCount = notifications.filter(n => !n.read).length
+  const unreadDMs = useUnreadDMs(profile?.id)
+  const isAgentOrAdmin = profile?.role === 'moderator' || profile?.role === 'admin' || profile?.role === 'superadmin'
+  const chatActive = pathname === '/chat' || pathname.startsWith('/chat/') ||
+                      pathname === '/messages' || pathname.startsWith('/messages/')
 
   // ── Real-time subscriptions ──────────────────────────────────────
   useEffect(() => {
@@ -131,23 +137,25 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
         <Menu className="w-[18px] h-[18px]" />
       </button>
 
-      {/* Desktop search */}
-      <div className="flex-1 max-w-sm hidden md:block">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
-          <input
-            className="input py-2 pl-9 text-sm h-9"
-            placeholder="Search residents…"
-            style={{ borderRadius: '99px', background: 'var(--surface-2)', fontSize: '0.8125rem' }}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                const q = (e.target as HTMLInputElement).value.trim()
-                if (q) router.push(`/residents?q=${encodeURIComponent(q)}`)
-              }
-            }}
-          />
+      {/* Desktop search — residents directory now lives in Admin Panel, so only agents/admins see it */}
+      {isAgentOrAdmin && (
+        <div className="flex-1 max-w-sm hidden md:block">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
+            <input
+              className="input py-2 pl-9 text-sm h-9"
+              placeholder="Search residents…"
+              style={{ borderRadius: '99px', background: 'var(--surface-2)', fontSize: '0.8125rem' }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  const q = (e.target as HTMLInputElement).value.trim()
+                  if (q) router.push(`/admin?tab=directory&q=${encodeURIComponent(q)}`)
+                }
+              }}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex-1" />
 
@@ -160,31 +168,59 @@ export default function Topbar({ profile, onMenuClick }: TopbarProps) {
         <Search className="w-[18px] h-[18px]" />
       </button>
 
-      {/* Quick-nav: Chat + Messages — desktop only (mobile uses bottom nav) */}
-      <div className="hidden md:flex items-center">
-        {[
-          { href: '/chat',     icon: MessageSquare, title: 'Phase Chat' },
-          { href: '/messages', icon: Mail,          title: 'Messages'   },
-        ].map(({ href, icon: Icon, title }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
-          return (
-            <Link
-              key={href}
-              href={href}
-              className="btn-icon relative"
-              title={title}
-              style={active ? { color: 'var(--brand)', background: 'var(--brand-xlight)' } : undefined}
+      {/* Chat — combines Phase Chat + Direct Messages behind one icon; desktop only (mobile uses bottom nav) */}
+      <div className="hidden md:block relative">
+        <button
+          onClick={() => setShowChatMenu(v => !v)}
+          className="btn-icon relative"
+          title="Chat"
+          style={chatActive ? { color: 'var(--brand)', background: 'var(--brand-xlight)' } : undefined}
+        >
+          <MessageSquare className="w-[18px] h-[18px]" />
+          {unreadDMs > 0 && (
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full border-2"
+              style={{ background: '#ef4444', borderColor: 'var(--surface)' }} />
+          )}
+        </button>
+
+        {showChatMenu && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowChatMenu(false)} />
+            <div
+              className="absolute left-0 top-full mt-2 z-50 overflow-hidden card"
+              style={{ width: 260, boxShadow: 'var(--shadow-lg)', borderRadius: 'var(--radius-lg)' }}
             >
-              <Icon className="w-[18px] h-[18px]" />
-              {active && (
-                <span
-                  className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
-                  style={{ background: 'var(--brand)' }}
-                />
-              )}
-            </Link>
-          )
-        })}
+              <Link
+                href="/chat"
+                onClick={() => setShowChatMenu(false)}
+                className="flex items-center gap-3 px-4 py-3 transition-colors"
+                style={{ borderBottom: '1px solid var(--border-soft)' }}
+              >
+                <MessageSquare className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--brand)' }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Phase Chat</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Chat with your phase</p>
+                </div>
+              </Link>
+              <Link
+                href="/messages"
+                onClick={() => setShowChatMenu(false)}
+                className="flex items-center gap-3 px-4 py-3 transition-colors"
+              >
+                <Mail className="w-4 h-4 flex-shrink-0" style={{ color: '#2563eb' }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Direct Messages</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Private conversations</p>
+                </div>
+                {unreadDMs > 0 && (
+                  <span className="text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: '#ef4444' }}>
+                    {unreadDMs > 9 ? '9+' : unreadDMs}
+                  </span>
+                )}
+              </Link>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Theme toggle */}

@@ -1,7 +1,5 @@
-'use client'
-
 import {
-  Rss, Users, CheckCircle2, Shield, Zap, Droplets, Camera,
+  Users, CheckCircle2, Shield, Zap, Droplets, Camera,
   Wrench, Leaf, TrendingUp, Building2, Vote, MessageCircle,
   Heart, Calendar, Star, ChevronRight,
 } from 'lucide-react'
@@ -77,24 +75,11 @@ function BulletItem({ children }: { children: React.ReactNode }) {
   )
 }
 
-/* ── Main page ───────────────────────────────────────── */
+/* ── Main panel ──────────────────────────────────────── */
 
-export default function CommunityUpdatesPage() {
+export default function CommunityUpdatesPanel() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-
-      {/* ── Page header ── */}
-      <div className="flex items-center gap-2 mb-1">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ background: 'var(--brand)' }}
-        >
-          <Rss className="w-4 h-4 text-white" />
-        </div>
-        <h1 className="text-xl font-bold font-display" style={{ color: 'var(--text-primary)' }}>
-          Community Updates
-        </h1>
-      </div>
 
       {/* ── Hero Banner ── */}
       <div

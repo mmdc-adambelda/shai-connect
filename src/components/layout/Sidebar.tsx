@@ -5,9 +5,9 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Newspaper, Megaphone,
-  Users, User, ShieldCheck, Video, X,
-  Rss, FileText, BarChart3, LogOut, Phone,
-  MessageSquare, Mail, LifeBuoy, Headphones,
+  User, ShieldCheck, X,
+  FileText, BarChart3, LogOut,
+  LifeBuoy, Headphones,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useEffect } from 'react'
@@ -16,19 +16,13 @@ import type { Profile } from '@/types'
 
 const communityItems = [
   { label: 'Feed',               href: '/feed',              icon: Newspaper  },
-  { label: 'Announcements',      href: '/announcements',     icon: Megaphone  },
-  { label: 'Community Updates',  href: '/community-updates', icon: Rss        },
+  { label: 'Bulletin Board',     href: '/bulletin-board',    icon: Megaphone  },
   { label: 'Board Resolutions',  href: '/board-resolutions', icon: FileText   },
   { label: 'Financial Reports',  href: '/financial-reports', icon: BarChart3  },
-  { label: 'Residents',          href: '/residents',         icon: Users      },
-  { label: 'General Assembly',   href: '/general-assembly',  icon: Video      },
-  { label: 'Important Contacts', href: '/contacts',          icon: Phone      },
 ]
 
 const communicateItems = [
-  { label: 'Phase Chat',     href: '/chat',     icon: MessageSquare },
-  { label: 'Messages',       href: '/messages', icon: Mail          },
-  { label: 'Support',        href: '/tickets',  icon: LifeBuoy      },
+  { label: 'Support', href: '/tickets', icon: LifeBuoy },
 ]
 
 interface SidebarProps {

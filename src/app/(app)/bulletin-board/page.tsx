@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import AnnouncementsClient from './AnnouncementsClient'
+import BulletinBoardClient from './BulletinBoardClient'
 
-export default async function AnnouncementsPage() {
+export default async function BulletinBoardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -17,5 +17,11 @@ export default async function AnnouncementsPage() {
     .eq('id', user!.id)
     .single()
 
-  return <AnnouncementsClient announcements={announcements || []} currentProfile={profile} currentUserId={user!.id} />
+  return (
+    <BulletinBoardClient
+      announcements={announcements || []}
+      currentProfile={profile}
+      currentUserId={user!.id}
+    />
+  )
 }

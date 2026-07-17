@@ -108,27 +108,9 @@ function ContactCard({
   )
 }
 
-export default function ContactsPage() {
+export default function ImportantContactsPanel() {
   return (
     <div className="max-w-xl mx-auto space-y-6">
-
-      {/* Page header */}
-      <div className="flex items-center gap-3">
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: 'var(--brand)' }}
-        >
-          <Phone className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold font-display" style={{ color: 'var(--text-primary)' }}>
-            Important Contacts
-          </h1>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Key numbers for HOA, emergency, and property services
-          </p>
-        </div>
-      </div>
 
       {/* HOA & Emergency section */}
       <section>

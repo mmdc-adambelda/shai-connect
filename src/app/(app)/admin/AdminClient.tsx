@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   Users, FileText, Megaphone, MessageSquare, ShieldAlert,
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react'
 import type { Profile } from '@/types'
 import clsx from 'clsx'
+import ResidentsClient from '../residents/ResidentsClient'
 
 const PHASES = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
 
@@ -200,13 +202,20 @@ export default function AdminClient({
   users: initialUsers,
   currentProfile,
   stats,
+  residents,
+  initialFollowing,
 }: {
   users: Profile[]
   currentProfile: Profile
   stats: { totalUsers: number; totalPosts: number; totalAnnouncements: number; totalMessages: number }
+  residents: Profile[]
+  initialFollowing: Set<string>
 }) {
   const supabase = createClient()
-  const [tab, setTab] = useState<'overview' | 'residents' | 'flags' | 'dues'>('overview')
+  const searchParams = useSearchParams()
+  const [tab, setTab] = useState<'overview' | 'residents' | 'directory' | 'flags' | 'dues'>(
+    (searchParams.get('tab') as 'directory') === 'directory' ? 'directory' : 'overview'
+  )
   const [users, setUsers] = useState<Profile[]>(initialUsers)
   const [userSearch, setUserSearch] = useState('')
   const [verifyFilter, setVerifyFilter] = useState<'all' | 'pending' | 'verified'>('all')
@@ -332,6 +341,7 @@ export default function AdminClient({
         {([
           { key: 'overview',  label: 'Overview'  },
           { key: 'residents', label: 'Residents' },
+          { key: 'directory', label: 'Directory' },
           { key: 'flags',     label: 'Flagged'   },
           { key: 'dues',      label: 'Dues'       },
         ] as const).map(({ key, label }) => (
@@ -610,6 +620,15 @@ export default function AdminClient({
             </table>
           </div>
         </div>
+      )}
+
+      {/* ── DIRECTORY ── */}
+      {tab === 'directory' && (
+        <ResidentsClient
+          residents={residents}
+          currentUserId={currentProfile.id}
+          initialFollowing={initialFollowing}
+        />
       )}
 
       {/* ── FLAGS ── */}

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import type { Profile, SupportTicket, TicketPriority } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
+import ImportantContactsPanel from './ImportantContactsPanel'
 
 // ── Constants ────────────────────────────────────────────────
 
@@ -320,6 +321,7 @@ export default function TicketClient({
   const [showNew, setShowNew] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [view, setView] = useState<'tickets' | 'contacts'>('tickets')
 
   const stats = {
     open:       tickets.filter(t => t.status === 'open' || t.status === 'assigned').length,
@@ -358,6 +360,35 @@ export default function TicketClient({
         </button>
       </div>
 
+      {/* Tabs: file a ticket vs. important contacts */}
+      <div
+        className="flex gap-1 mb-5 p-1 rounded-lg w-fit"
+        style={{ background: 'var(--surface-2)' }}
+      >
+        {([
+          { key: 'tickets',  label: 'File a Ticket',      icon: ClipboardList },
+          { key: 'contacts', label: 'Important Contacts', icon: Phone         },
+        ] as const).map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setView(key)}
+            className="px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5"
+            style={{
+              background: view === key ? 'var(--surface)' : 'transparent',
+              color:      view === key ? 'var(--text-primary)' : 'var(--text-muted)',
+              boxShadow:  view === key ? 'var(--shadow-xs)' : 'none',
+            }}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'contacts' && <ImportantContactsPanel />}
+
+      {view === 'tickets' && (
+        <>
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         {[
@@ -470,6 +501,8 @@ export default function TicketClient({
             {statusFilter !== 'all' || search ? ` (filtered from ${tickets.length} total)` : ''}
           </p>
         </div>
+      )}
+        </>
       )}
 
       {/* New Ticket Modal */}
