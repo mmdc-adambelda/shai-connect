@@ -7,6 +7,7 @@
 
 -- Allow admins, moderators, and superadmins to update any resident's profile
 -- (verify/un-verify, edit name/unit/phase/project code, etc.)
+drop policy if exists "Admins and moderators can update any profile" on public.profiles;
 create policy "Admins and moderators can update any profile"
   on public.profiles for update
   using (
@@ -18,6 +19,7 @@ create policy "Admins and moderators can update any profile"
 
 -- Allow admins and superadmins to delete resident profiles
 -- (moderators can verify/edit but not delete accounts)
+drop policy if exists "Admins can delete profiles" on public.profiles;
 create policy "Admins can delete profiles"
   on public.profiles for delete
   using (
