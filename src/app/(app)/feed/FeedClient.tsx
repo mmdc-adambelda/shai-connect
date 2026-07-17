@@ -7,12 +7,13 @@ import Link from 'next/link'
 import {
   ImagePlus, FileText, Loader2, X, Paperclip,
   MessageCircle, Share2, ChevronDown, ChevronUp, Send, MoreHorizontal, Info, Check,
-  ArrowUp, Mail, Link2, Repeat2,
+  ArrowUp, Mail, Link2, Repeat2, Flag,
 } from 'lucide-react'
 import type { Post, Profile, Comment, ReactionType } from '@/types'
 import clsx from 'clsx'
 import { useReactions } from '@/hooks/useEngagement'
 import AvatarUI from '@/components/ui/Avatar'
+import ReportModal from '@/components/ReportModal'
 
 const PHASES = ['All Phases', 'Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
 
@@ -412,6 +413,7 @@ function ReactionBar({
       {showComments && (
         <CommentsSection
           postId={postId}
+          currentUserId={currentUserId}
           onCommentAdded={() => setCommentCount(c => c + 1)}
         />
       )}
@@ -430,7 +432,7 @@ function ReactionBar({
 }
 
 // ── Comments Section ─────────────────────────────────────────────────────────
-function CommentsSection({ postId, onCommentAdded }: { postId: string; onCommentAdded: () => void }) {
+function CommentsSection({ postId, currentUserId, onCommentAdded }: { postId: string; currentUserId: string; onCommentAdded: () => void }) {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -440,6 +442,7 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({})
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
+  const [reportingId, setReportingId] = useState<string | null>(null)
 
   const loadComments = useCallback(async () => {
     setLoading(true)
@@ -544,6 +547,17 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
                     >
                       Reply
                     </button>
+                    {comment.author_id !== currentUserId && (
+                      <button
+                        className="text-[11px] font-semibold transition-colors"
+                        style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#DC2626')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                        onClick={() => setReportingId(comment.id)}
+                      >
+                        Report
+                      </button>
+                    )}
                     {hasReplies && (
                       <button
                         className="flex items-center gap-1 text-[11px] font-semibold"
@@ -653,6 +667,15 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
           {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
         </button>
       </div>
+
+      {reportingId && (
+        <ReportModal
+          contentType="comment"
+          contentId={reportingId}
+          reporterId={currentUserId}
+          onClose={() => setReportingId(null)}
+        />
+      )}
     </div>
   )
 }
@@ -671,6 +694,7 @@ const PostCard = memo(function PostCard({
 }) {
   const author = post.profiles as unknown as Profile
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showReport, setShowReport] = useState(false)
 
   const reactionCounts: Record<string, number> = {}
   for (const rc of post.reaction_counts ?? []) {
@@ -729,6 +753,17 @@ const PostCard = memo(function PostCard({
                 >
                   Copy link
                 </button>
+                {post.author_id !== currentUserId && (
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm flex items-center gap-1.5 transition-colors"
+                    style={{ color: 'var(--text-secondary)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+                    onClick={() => { setMenuOpen(false); setShowReport(true) }}
+                  >
+                    <Flag className="w-3.5 h-3.5" /> Report
+                  </button>
+                )}
                 {post.author_id === currentUserId && (
                   <button
                     className="w-full text-left px-3 py-2 text-sm text-red-500 transition-colors"
@@ -743,6 +778,15 @@ const PostCard = memo(function PostCard({
           )}
         </div>
       </div>
+
+      {showReport && (
+        <ReportModal
+          contentType="post"
+          contentId={post.id}
+          reporterId={currentUserId}
+          onClose={() => setShowReport(false)}
+        />
+      )}
 
       <p
         className="text-sm leading-relaxed whitespace-pre-wrap"

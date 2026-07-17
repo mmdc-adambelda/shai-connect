@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Send, ChevronDown } from 'lucide-react'
+import { Send, ChevronDown, Flag } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import type { ChatMessage, Profile } from '@/types'
 import clsx from 'clsx'
+import ReportModal from '@/components/ReportModal'
 
 const CHAT_EMOJIS = ['❤️', '👍', '😂', '😮', '🥺', '🔥']
 
@@ -52,6 +53,7 @@ export default function ChatClient({
   const [msgReactionCounts, setMsgReactionCounts] = useState<Record<string, Record<string, number>>>({})
   const [myMsgReactions, setMyMsgReactions] = useState<Record<string, string | null>>({})
   const [emojiPickerId, setEmojiPickerId] = useState<string | null>(null)
+  const [reportingId, setReportingId] = useState<string | null>(null)
   const loadedReactionIds = useRef<Set<string>>(new Set())
 
   const resizeChatInput = useCallback((el: HTMLTextAreaElement | null) => {
@@ -396,7 +398,7 @@ export default function ChatClient({
                       </div>
                     )}
 
-                    {/* Others' message react button — shown on group hover */}
+                    {/* Others' message react + report buttons — shown on group hover */}
                     {!isMe && editingId !== msg.id && (
                       <button
                         onClick={e => { e.stopPropagation(); setEmojiPickerId(p => p === msg.id ? null : msg.id) }}
@@ -404,6 +406,16 @@ export default function ChatClient({
                         style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)' }}
                       >
                         😊
+                      </button>
+                    )}
+                    {!isMe && editingId !== msg.id && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setReportingId(msg.id) }}
+                        className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)' }}
+                        title="Report message"
+                      >
+                        <Flag className="w-3.5 h-3.5" style={{ color: '#DC2626' }} />
                       </button>
                     )}
                   </div>
@@ -464,6 +476,15 @@ export default function ChatClient({
         </div>
 
       </div>
+
+      {reportingId && (
+        <ReportModal
+          contentType="chat_message"
+          contentId={reportingId}
+          reporterId={currentUserId}
+          onClose={() => setReportingId(null)}
+        />
+      )}
     </div>
   )
 }

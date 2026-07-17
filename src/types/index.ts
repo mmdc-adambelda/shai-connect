@@ -158,6 +158,26 @@ export interface DirectMessage {
   recipient?: Profile
 }
 
+export type ReportableType = 'post' | 'comment' | 'chat_message'
+export type ReportReason = 'Spam' | 'Conduct' | 'Misinformation' | 'Other'
+export type ReportStatus = 'pending' | 'removed' | 'dismissed'
+
+export interface Report {
+  id: string
+  content_type: ReportableType
+  content_id: string
+  reporter_id: string
+  reason: ReportReason
+  details: string | null
+  status: ReportStatus
+  reviewed_by: string | null
+  reviewed_at: string | null
+  created_at: string
+  reporter?: { id: string; full_name: string } | null
+  preview_author?: string | null
+  preview_content?: string | null
+}
+
 export interface Announcement {
   id: string
   title: string

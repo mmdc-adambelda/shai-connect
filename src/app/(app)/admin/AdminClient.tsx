@@ -3,28 +3,30 @@
 import { useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { formatDistanceToNow } from 'date-fns'
 import {
   Users, FileText, Megaphone, MessageSquare, ShieldAlert,
   CheckCircle, XCircle, Edit2, Save, X, Search,
   ShieldCheck, ShieldOff, KeyRound, Hash,
   Trash2, Upload, Wallet, RefreshCw,
 } from 'lucide-react'
-import type { Profile } from '@/types'
+import type { Profile, Report, ReportableType } from '@/types'
 import clsx from 'clsx'
 import ResidentsClient from '../residents/ResidentsClient'
 
 const PHASES = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
 
-const MOCK_FLAGS = [
-  { id: '1', user: 'unknown_user_42',  content: 'Spam post in Phase 2 chat',             reason: 'Spam',          time: '2h ago' },
-  { id: '2', user: 'resident_anon',    content: 'Offensive comment on announcement',      reason: 'Conduct',       time: '5h ago' },
-  { id: '3', user: 'new_account_7',   content: 'Unverified claim about HOA funds',       reason: 'Misinformation', time: '1d ago' },
-]
-
 const reasonBadge: Record<string, string> = {
   Spam: 'badge-yellow',
   Conduct: 'badge-red',
   Misinformation: 'badge-red',
+  Other: 'badge-gray',
+}
+
+const contentTypeLabel: Record<ReportableType, string> = {
+  post: 'Post',
+  comment: 'Comment',
+  chat_message: 'Chat Message',
 }
 
 function initials(name: string) {
@@ -206,12 +208,14 @@ export default function AdminClient({
   stats,
   residents,
   initialFollowing,
+  reports: initialReports,
 }: {
   users: Profile[]
   currentProfile: Profile
   stats: { totalUsers: number; totalPosts: number; totalAnnouncements: number; totalMessages: number }
   residents: Profile[]
   initialFollowing: Set<string>
+  reports: Report[]
 }) {
   const supabase = createClient()
   const searchParams = useSearchParams()
@@ -224,7 +228,7 @@ export default function AdminClient({
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [editingUser, setEditingUser] = useState<Profile | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [resolvedFlags, setResolvedFlags] = useState<Set<string>>(new Set())
+  const [reports, setReports] = useState<Report[]>(initialReports)
   const [actionError, setActionError] = useState('')
 
   // Dues CSV upload state
@@ -275,6 +279,43 @@ export default function AdminClient({
   // ── After edit saved ───────────────────────────────────────────
   const handleUserSaved = (updated: Profile) => {
     setUsers(prev => prev.map(u => u.id === updated.id ? updated : u))
+  }
+
+  // ── Resolve a flagged report ────────────────────────────────────
+  const CONTENT_TABLE: Record<ReportableType, string> = {
+    post: 'posts',
+    comment: 'comments',
+    chat_message: 'chat_messages',
+  }
+
+  const handleResolveReport = async (report: Report, action: 'removed' | 'dismissed') => {
+    setActionLoading(report.id)
+    setActionError('')
+
+    if (action === 'removed') {
+      const { error: delErr } = await supabase
+        .from(CONTENT_TABLE[report.content_type])
+        .delete()
+        .eq('id', report.content_id)
+      if (delErr) {
+        setActionLoading(null)
+        setActionError('Could not delete the reported content — you may not have permission.')
+        return
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('reports')
+      .update({ status: action, reviewed_by: currentProfile.id, reviewed_at: new Date().toISOString() })
+      .eq('id', report.id)
+      .select('id')
+
+    setActionLoading(null)
+    if (error || !data?.length) {
+      setActionError('Could not update the report status — you may not have permission.')
+      return
+    }
+    setReports(prev => prev.filter(r => r.id !== report.id))
   }
 
   // ── CSV parse on file select ───────────────────────────────────
@@ -377,9 +418,9 @@ export default function AdminClient({
             }}
           >
             {label}
-            {key === 'flags' && (
+            {key === 'flags' && reports.length > 0 && (
               <span className="text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#ef4444' }}>
-                {MOCK_FLAGS.length - resolvedFlags.size}
+                {reports.length}
               </span>
             )}
             {key === 'residents' && pendingCount > 0 && (
@@ -668,38 +709,72 @@ export default function AdminClient({
         <div className="card overflow-hidden">
           <div className="p-4" style={{ borderBottom: '1px solid var(--border-soft)' }}>
             <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Flagged Content</h3>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Review and moderate reported posts and users</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Review and moderate reported posts, comments, and chat messages</p>
           </div>
-          <div>
-            {MOCK_FLAGS.map(flag => {
-              const resolved = resolvedFlags.has(flag.id)
-              return (
-                <div key={flag.id}
-                  className={clsx('p-4 flex items-start gap-4 transition-colors', resolved && 'opacity-50')}
+
+          {actionError && (
+            <div
+              className="m-4 mb-0 p-3 rounded-xl text-sm flex items-center justify-between gap-3"
+              style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}
+            >
+              <span>{actionError}</span>
+              <button onClick={() => setActionError('')} className="btn-icon w-6 h-6 flex-shrink-0">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {reports.length === 0 ? (
+            <div className="p-10 flex flex-col items-center gap-2 text-center">
+              <CheckCircle className="w-8 h-8" style={{ color: 'var(--text-muted)' }} />
+              <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Nothing flagged</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Reported posts, comments, and chat messages will show up here.</p>
+            </div>
+          ) : (
+            <div>
+              {reports.map(report => (
+                <div key={report.id}
+                  className="p-4 flex items-start gap-4 transition-colors"
                   style={{ borderBottom: '1px solid var(--border-soft)' }}
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{flag.user}</span>
-                      <span className={`badge ${reasonBadge[flag.reason] || 'badge-gray'}`}>{flag.reason}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        {report.preview_author ?? 'Unknown'}
+                      </span>
+                      <span className="badge badge-gray">{contentTypeLabel[report.content_type]}</span>
+                      <span className={`badge ${reasonBadge[report.reason] || 'badge-gray'}`}>{report.reason}</span>
                     </div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{flag.content}</p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{flag.time}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{report.preview_content}</p>
+                    {report.details && (
+                      <p className="text-xs mt-1 italic" style={{ color: 'var(--text-muted)' }}>
+                        Reporter note: {report.details}
+                      </p>
+                    )}
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                      Reported by {report.reporter?.full_name ?? 'Someone'} · {formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}
+                    </p>
                   </div>
-                  {resolved ? (
-                    <div className="flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--brand)' }}>
-                      <CheckCircle className="w-4 h-4" /> Resolved
-                    </div>
-                  ) : (
-                    <div className="flex gap-2 flex-shrink-0">
-                      <button onClick={() => setResolvedFlags(p => new Set(p).add(flag.id))} className="btn-primary py-1.5 text-xs">Remove</button>
-                      <button onClick={() => setResolvedFlags(p => new Set(p).add(flag.id))} className="btn-ghost py-1.5 text-xs">Dismiss</button>
-                    </div>
-                  )}
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleResolveReport(report, 'removed')}
+                      disabled={actionLoading === report.id}
+                      className="btn-primary py-1.5 text-xs disabled:opacity-50"
+                    >
+                      {actionLoading === report.id ? '…' : 'Remove'}
+                    </button>
+                    <button
+                      onClick={() => handleResolveReport(report, 'dismissed')}
+                      disabled={actionLoading === report.id}
+                      className="btn-ghost py-1.5 text-xs disabled:opacity-50"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
                 </div>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
