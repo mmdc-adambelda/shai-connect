@@ -66,7 +66,7 @@ function EditUserModal({
 
     setSaving(true)
     const unit = `Block ${blockNo}, Lot ${lotNo}`
-    const { error: dbErr } = await supabase
+    const { data: updated, error: dbErr } = await supabase
       .from('profiles')
       .update({
         full_name:    fullName.trim(),
@@ -77,9 +77,11 @@ function EditUserModal({
         phase,
       })
       .eq('id', user.id)
+      .select('id')
 
     setSaving(false)
     if (dbErr) { setError(dbErr.message); return }
+    if (!updated?.length) { setError('Update was blocked — you may not have permission to edit this resident.'); return }
 
     onSaved({
       ...user,
@@ -223,6 +225,7 @@ export default function AdminClient({
   const [editingUser, setEditingUser] = useState<Profile | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [resolvedFlags, setResolvedFlags] = useState<Set<string>>(new Set())
+  const [actionError, setActionError] = useState('')
 
   // Dues CSV upload state
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
@@ -237,18 +240,36 @@ export default function AdminClient({
   // ── Verify / Unverify ──────────────────────────────────────────
   const handleVerify = async (userId: string, verify: boolean) => {
     setActionLoading(userId)
-    await supabase.from('profiles').update({ is_verified: verify }).eq('id', userId)
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_verified: verify } : u))
+    setActionError('')
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ is_verified: verify })
+      .eq('id', userId)
+      .select('id')
     setActionLoading(null)
+    if (error || !data?.length) {
+      setActionError('Could not update this resident — you may not have permission.')
+      return
+    }
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_verified: verify } : u))
   }
 
   // ── Delete resident ────────────────────────────────────────────
   const handleDelete = async (userId: string) => {
     setActionLoading(userId)
-    await supabase.from('profiles').delete().eq('id', userId)
-    setUsers(prev => prev.filter(u => u.id !== userId))
-    setConfirmDeleteId(null)
+    setActionError('')
+    const { data, error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId)
+      .select('id')
     setActionLoading(null)
+    setConfirmDeleteId(null)
+    if (error || !data?.length) {
+      setActionError('Could not delete this resident — you may not have permission, or their records (posts, tickets, etc.) are blocking it.')
+      return
+    }
+    setUsers(prev => prev.filter(u => u.id !== userId))
   }
 
   // ── After edit saved ───────────────────────────────────────────
@@ -430,6 +451,17 @@ export default function AdminClient({
       {/* ── RESIDENTS ── */}
       {tab === 'residents' && (
         <div className="card overflow-hidden">
+          {actionError && (
+            <div
+              className="m-4 mb-0 p-3 rounded-xl text-sm flex items-center justify-between gap-3"
+              style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}
+            >
+              <span>{actionError}</span>
+              <button onClick={() => setActionError('')} className="btn-icon w-6 h-6 flex-shrink-0">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
           {/* Toolbar */}
           <div
             className="p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center"
