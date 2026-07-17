@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import AvatarUI from '@/components/ui/Avatar'
+import GlobalSearch from '@/components/layout/GlobalSearch'
 import type { Profile } from '@/types'
 
 interface AppNotification {
@@ -37,7 +38,6 @@ export default function Topbar({ profile, onMenuClick, unreadDMs }: TopbarProps)
   const [showMobileSearch, setShowMobileSearch] = useState(false)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const unreadCount = notifications.filter(n => !n.read).length
-  const isAgentOrAdmin = profile?.role === 'moderator' || profile?.role === 'admin' || profile?.role === 'superadmin'
   const chatActive = pathname === '/chat' || pathname.startsWith('/chat/') ||
                       pathname === '/messages' || pathname.startsWith('/messages/')
 
@@ -136,25 +136,10 @@ export default function Topbar({ profile, onMenuClick, unreadDMs }: TopbarProps)
         <Menu className="w-[18px] h-[18px]" />
       </button>
 
-      {/* Desktop search — residents directory now lives in Admin Panel, so only agents/admins see it */}
-      {isAgentOrAdmin && (
-        <div className="flex-1 max-w-sm hidden md:block">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
-            <input
-              className="input py-2 pl-9 text-sm h-9"
-              placeholder="Search residents…"
-              style={{ borderRadius: '99px', background: 'var(--surface-2)', fontSize: '0.8125rem' }}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  const q = (e.target as HTMLInputElement).value.trim()
-                  if (q) router.push(`/admin?tab=directory&q=${encodeURIComponent(q)}`)
-                }
-              }}
-            />
-          </div>
-        </div>
-      )}
+      {/* Desktop search — global search across people and posts */}
+      <div className="flex-1 max-w-sm hidden md:block">
+        <GlobalSearch profile={profile} />
+      </div>
 
       <div className="flex-1" />
 
@@ -341,16 +326,7 @@ export default function Topbar({ profile, onMenuClick, unreadDMs }: TopbarProps)
           className="absolute left-0 right-0 top-14 px-3 py-2 z-30 md:hidden"
           style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)' }}
         >
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
-            <input
-              autoFocus
-              className="input py-2 pl-9 text-sm h-9"
-              placeholder="Search residents, posts…"
-              style={{ borderRadius: '99px' }}
-              onBlur={() => setShowMobileSearch(false)}
-            />
-          </div>
+          <GlobalSearch profile={profile} autoFocus onNavigate={() => setShowMobileSearch(false)} />
         </div>
       )}
     </header>

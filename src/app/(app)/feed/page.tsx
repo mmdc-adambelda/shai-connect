@@ -2,7 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import FeedClient from './FeedClient'
 import type { Post, ReactionType } from '@/types'
 
-export default async function FeedPage() {
+export default async function FeedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ post?: string }>
+}) {
+  const { post: highlightPostId } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -23,12 +28,23 @@ export default async function FeedPage() {
   }
 
   const { data: rawPosts } = await postsQuery
+  let allRawPosts = rawPosts ?? []
 
-  if (!rawPosts?.length) {
-    return <FeedClient posts={[]} currentProfile={profile} currentUserId={user!.id} />
+  // A post opened from search may be older than the latest 30 — fetch it directly so it's still shown
+  if (highlightPostId && !allRawPosts.some(p => p.id === highlightPostId)) {
+    const { data: linkedPost } = await supabase
+      .from('posts')
+      .select('*, profiles(id, full_name, unit, phase, role, avatar_url)')
+      .eq('id', highlightPostId)
+      .maybeSingle()
+    if (linkedPost) allRawPosts = [linkedPost, ...allRawPosts]
   }
 
-  const postIds = rawPosts.map(p => p.id)
+  if (!allRawPosts.length) {
+    return <FeedClient posts={[]} currentProfile={profile} currentUserId={user!.id} highlightPostId={highlightPostId} />
+  }
+
+  const postIds = allRawPosts.map(p => p.id)
 
   // Batch-fetch reaction counts for all posts (single query — no N+1)
   const { data: allReactions } = await supabase
@@ -68,12 +84,12 @@ export default async function FeedPage() {
   }
 
   // Merge into posts
-  const posts: Post[] = rawPosts.map(p => ({
+  const posts: Post[] = allRawPosts.map(p => ({
     ...p,
     reaction_counts: Object.entries(reactionMap[p.id] ?? {}).map(([type, count]) => ({ type: type as ReactionType, count })),
     user_reaction: userReactionMap[p.id] ?? null,
     comment_count: commentCountMap[p.id] ?? 0,
   }))
 
-  return <FeedClient posts={posts} currentProfile={profile} currentUserId={user!.id} />
+  return <FeedClient posts={posts} currentProfile={profile} currentUserId={user!.id} highlightPostId={highlightPostId} />
 }

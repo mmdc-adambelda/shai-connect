@@ -926,15 +926,27 @@ export default function FeedClient({
   posts: initial,
   currentProfile,
   currentUserId,
+  highlightPostId,
 }: {
   posts: Post[]
   currentProfile: Profile | null
   currentUserId: string
+  highlightPostId?: string
 }) {
   const [posts, setPosts] = useState(initial)
   const [showCompose, setShowCompose] = useState(false)
   const [composeQuote, setComposeQuote] = useState('')
   const [showBackToTop, setShowBackToTop] = useState(false)
+  const [highlightActive, setHighlightActive] = useState(!!highlightPostId)
+
+  // Scroll to and briefly highlight a post opened from search
+  useEffect(() => {
+    if (!highlightPostId) return
+    const el = document.getElementById(`post-${highlightPostId}`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const timeout = setTimeout(() => setHighlightActive(false), 3000)
+    return () => clearTimeout(timeout)
+  }, [highlightPostId])
 
   // Track scroll of the app's main element for back-to-top button (mobile only)
   useEffect(() => {
@@ -1044,13 +1056,20 @@ export default function FeedClient({
           </div>
         )}
         {posts.map((post) => (
-          <PostCard
+          <div
             key={post.id}
-            post={post}
-            currentUserId={currentUserId}
-            currentProfile={currentProfile}
-            onShareToFeed={handleShareToFeed}
-          />
+            id={`post-${post.id}`}
+            style={highlightActive && post.id === highlightPostId
+              ? { boxShadow: '0 0 0 3px var(--brand)', borderRadius: 'var(--radius-lg)', transition: 'box-shadow 0.3s' }
+              : { transition: 'box-shadow 0.3s' }}
+          >
+            <PostCard
+              post={post}
+              currentUserId={currentUserId}
+              currentProfile={currentProfile}
+              onShareToFeed={handleShareToFeed}
+            />
+          </div>
         ))}
       </div>
 
